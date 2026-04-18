@@ -18,13 +18,13 @@ This repository provides a working, extensible implementation of that architectu
 
 Modern AI systems frequently fail in high-stakes environments due to:
 
-- answers generated without sufficient or verifiable evidence  
-- weak or non-existent policy enforcement  
-- uncontrolled or low-quality memory accumulation  
-- limited visibility into reasoning and decision processes  
-- unreliable behaviour in long-running or agent-based workflows  
+- answers generated without sufficient or verifiable evidence
+- weak or non-existent policy enforcement
+- uncontrolled or low-quality memory accumulation
+- limited visibility into reasoning and decision processes
+- unreliable behaviour in long-running or agent-based workflows
 
-These limitations are not purely model problems. They are **system design problems**.
+These limitations are not purely model problems. They are system design problems.
 
 ---
 
@@ -34,39 +34,39 @@ OtiLLM introduces a structured runtime in which every meaningful output follows 
 
 Input → Evidence → Reason → Verify → Align → Act → Explain
 
-This replaces loosely coupled pipelines with a **bounded, auditable, and evidence-driven execution model**.
+This replaces loosely coupled pipelines with a bounded, auditable, and evidence-driven execution model.
 
 ---
 
 ## How OtiLLM Differs from Existing Approaches
 
 ### Standard LLM Pipelines
-- rely heavily on prompt engineering  
-- limited visibility into reasoning  
-- no explicit evidence validation  
-- no runtime governance  
+- rely heavily on prompt engineering
+- limited visibility into reasoning
+- no explicit evidence validation
+- no runtime governance
 
 ### Traditional RAG Systems
-- improve factual grounding  
-- but often rely on naive retrieval  
-- lack policy awareness  
-- limited explainability  
-- no structured memory control  
+- improve factual grounding
+- but often rely on naive retrieval
+- lack policy awareness
+- limited explainability
+- no structured memory control
 
 ### Agent-Based Systems
-- powerful but often unbounded  
-- difficult to control or audit  
-- prone to unsafe or inconsistent behaviour  
+- powerful but often unbounded
+- difficult to control or audit
+- prone to unsafe or inconsistent behaviour
 
 ### OtiLLM
 
 OtiLLM combines the strengths of these approaches while addressing their weaknesses:
 
-- evidence is explicitly retrieved, scored, and validated  
-- policies are enforced before execution  
-- memory is gated and quality-controlled  
-- outputs are traceable and explainable  
-- system behaviour is bounded and auditable  
+- evidence is explicitly retrieved, scored, and validated
+- policies are enforced before execution
+- memory is gated and quality-controlled
+- outputs are traceable and explainable
+- system behaviour is bounded and auditable
 
 ---
 
@@ -76,15 +76,13 @@ OtiLLM combines the strengths of these approaches while addressing their weaknes
 
 A hybrid retrieval layer that evaluates information using multiple signals:
 
-- semantic relevance  
-- keyword overlap  
-- temporal freshness  
-- graph-aware signals  
-- source trust (provenance)  
+- semantic relevance
+- keyword overlap
+- temporal freshness
+- graph-aware signals
+- source trust (provenance)
 
 This enables more reliable evidence selection than standard retrieval pipelines.
-
----
 
 ### Policy Engine
 
@@ -92,19 +90,15 @@ A runtime governance layer that evaluates whether a request or action is allowed
 
 This enables safer deployment in regulated and high-trust environments.
 
----
-
 ### Memory Engine
 
 A gated memory system that only stores information when it is:
 
-- sufficiently high quality  
-- policy-compliant  
-- novel  
+- sufficiently high quality
+- policy-compliant
+- novel
 
 This prevents uncontrolled accumulation and improves long-term reliability.
-
----
 
 ### Cognitive Orchestrator
 
@@ -112,18 +106,16 @@ The central coordination layer that integrates retrieval, validation, scoring, a
 
 It ensures that outputs are only produced when evidence and confidence thresholds are satisfied.
 
----
-
 ### Explainability Layer
 
 A built-in tracing system that provides visibility into how each response is generated, including:
 
-- retrieved sources  
-- evidence scores  
-- confidence estimation  
-- policy decisions  
-- execution outcomes  
-- memory updates  
+- retrieved sources
+- evidence scores
+- confidence estimation
+- policy decisions
+- execution outcomes
+- memory updates
 
 ---
 
@@ -131,15 +123,15 @@ A built-in tracing system that provides visibility into how each response is gen
 
 OtiLLM is organised as a structured runtime pipeline:
 
-Multimodal Input  
-Perception Layer  
-Evidence Fabric  
-Cognitive Orchestrator  
-Policy Engine  
-Memory Engine  
-Generator / Action Layer  
-Explainability Trace  
-Output  
+Multimodal Input
+Perception Layer
+Evidence Fabric
+Cognitive Orchestrator
+Policy Engine
+Memory Engine
+Generator / Action Layer
+Explainability Trace
+Output
 
 This design enables controlled, interpretable, and verifiable AI behaviour.
 
@@ -149,14 +141,14 @@ This design enables controlled, interpretable, and verifiable AI behaviour.
 
 This initial release provides:
 
-- a modular Python package implementing the OtiLLM runtime  
-- evidence ingestion and hybrid retrieval  
-- policy-aware request handling  
-- memory-gated storage logic  
-- explainability trace generation  
-- working examples demonstrating usage  
-- a test suite for core components  
-- packaging configuration for distribution  
+- a modular Python package implementing the OtiLLM runtime
+- evidence ingestion and hybrid retrieval
+- policy-aware request handling
+- memory-gated storage logic
+- explainability trace generation
+- working examples demonstrating usage
+- a test suite for core components
+- packaging configuration for distribution
 
 ---
 
@@ -166,10 +158,10 @@ OtiLLM 0.1.0 is a foundational runtime framework.
 
 It does not claim:
 
-- state-of-the-art benchmark performance  
-- a fully trained large-scale foundation model  
-- production-grade distributed infrastructure  
-- complete multimodal training pipelines  
+- state-of-the-art benchmark performance
+- a fully trained large-scale foundation model
+- production-grade distributed infrastructure
+- complete multimodal training pipelines
 
 Instead, it establishes the architectural and implementation foundation required for those capabilities.
 
@@ -182,14 +174,25 @@ Clone the repository:
 ```bash
 git clone https://github.com/YOUR_GITHUB_USERNAME/OtiLLM.git
 cd OtiLLM
+```
 
-## Install locally:
+Install locally:
+
+```bash
 pip install -e .
+```
 
-## For development:
+For development:
+
+```bash
 pip install -e .[dev]
+```
+
+---
 
 ## Quick Start
+
+```python
 from otillm import OtiLLM
 
 model = OtiLLM()
@@ -210,6 +213,7 @@ response = model.query("Why is policy-aware retrieval important?")
 
 print(response.answer)
 print(model.explain(response))
+```
 
 ---
 
@@ -217,9 +221,10 @@ print(model.explain(response))
 
 The system produces:
 
-- A grounded response based on retrieved evidence
-- A detailed trace explaining:
-- Which sources were used
+1. A grounded response based on retrieved evidence
+2. A detailed trace explaining:
+
+- which sources were used
 - how they were scored
 - confidence level
 - evidence sufficiency
@@ -246,6 +251,7 @@ OtiLLM is particularly suited for:
 
 ## Repository Structure
 
+```text
 OtiLLM/
 ├── otillm/
 │   ├── core/
@@ -259,11 +265,15 @@ OtiLLM/
 ├── LICENSE
 ├── pyproject.toml
 └── setup.py
+```
 
 ---
 
 ## Running Tests
+
+```bash
 pytest
+```
 
 ---
 
@@ -319,15 +329,6 @@ Areas of interest include:
 
 ---
 
-## Citation
-
-If you use OtiLLM in research or applied work, please cite the project once the paper is released.
-
-A CITATION.cff file will be included in this repository.
-
----
-
 ## License
+
 This project is released under the MIT License.
-
-

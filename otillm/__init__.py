@@ -1,4 +1,4 @@
-"""Top-level package for OtiLLM 3.0.
+"""Top-level package for OtiLLM 0.1.0.
 
 This module exposes the main runtime class and key data structures so that
 users can import them directly from `otillm`.
@@ -26,4 +26,4 @@ __all__ = [
     "OtiLLM",
 ]
 
-__version__ = "3.0.0"
+__version__ = "0.1.0"

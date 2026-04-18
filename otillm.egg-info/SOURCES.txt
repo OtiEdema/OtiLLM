@@ -1,4 +1,3 @@
-LICENSE
 README.md
 pyproject.toml
 setup.py
@@ -9,6 +8,7 @@ otillm/types.py
 otillm.egg-info/PKG-INFO
 otillm.egg-info/SOURCES.txt
 otillm.egg-info/dependency_links.txt
+otillm.egg-info/requires.txt
 otillm.egg-info/top_level.txt
 otillm/core/__init__.py
 otillm/core/generator.py
