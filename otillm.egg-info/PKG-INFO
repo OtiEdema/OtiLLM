@@ -1,0 +1,132 @@
+Metadata-Version: 2.4
+Name: otillm
+Version: 3.0.0
+Summary: OtiLLM 3.0: An Evidence-Native, Policy-Aware, Multimodal AI Runtime
+Author: Oti Edema
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+Dynamic: requires-python
+
+# OtiLLM 3.0
+
+**Evidence-Native • Policy-Aware • Multimodal AI Runtime**
+
+OtiLLM 3.0 is a next-generation cognitive runtime for building reliable AI systems.
+It is designed to solve practical weaknesses in modern LLM, RAG, and agent systems by making
+**evidence**, **policy**, **memory**, and **explainability** first-class runtime primitives.
+
+## Why OtiLLM?
+
+Most AI systems fail in production because they:
+
+- answer without enough evidence
+- ignore policy and compliance boundaries
+- store memory unsafely or indiscriminately
+- provide weak explanations for high-stakes outputs
+
+OtiLLM 3.0 addresses that by implementing:
+
+- **Evidence Fabric** for hybrid retrieval and provenance scoring
+- **Policy Engine** for governance-aware runtime execution
+- **Memory Engine** for gated long-term memory writes
+- **Cognitive Orchestrator** for bounded, reliable execution
+- **Explainability Layer** for traceable decisions
+
+## Installation
+
+### From source
+
+```bash
+pip install -e .
+```
+
+### Standard install
+
+```bash
+pip install otillm
+```
+
+## Quick Start
+
+```python
+from otillm import OtiLLM
+
+model = OtiLLM()
+
+model.add_evidence(
+    content="RAG reduces hallucination by retrieving external evidence.",
+    source="doc1",
+    trust_score=0.9,
+)
+model.add_evidence(
+    content="Policy-aware systems are safer in regulated environments.",
+    source="doc2",
+    trust_score=0.95,
+)
+
+response = model.query("Why is policy-aware RAG useful?")
+print(response.answer)
+print(model.explain(response))
+```
+
+## Core Concepts
+
+### Evidence Fabric
+Hybrid retrieval that scores evidence using:
+
+- semantic score
+- keyword score
+- temporal freshness
+- graph score
+- provenance score
+
+### Policy Engine
+Evaluates requests before execution and blocks unsafe or non-compliant interactions.
+
+### Memory Engine
+Writes only content that is:
+
+- high quality
+- policy compliant
+- novel
+
+### Explainability
+Returns a detailed trace with:
+
+- retrieved sources
+- source scores
+- policy decision
+- confidence
+- evidence sufficiency
+- action taken
+
+## Running Tests
+
+```bash
+pytest
+```
+
+## Example Use Cases
+
+- enterprise RAG
+- regulated AI assistants
+- multimodal evidence systems
+- policy-governed AI agents
+- auditable AI copilots
+
+## Roadmap
+
+- vector database backends
+- graph database integration
+- pluggable LLM backends
+- multimodal encoders
+- enterprise policy packs
+- memory tiering
+- benchmark suite
+
+## License
+
+MIT

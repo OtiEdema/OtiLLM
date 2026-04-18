@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "otillm"
+version = "3.0.0"
+description = "OtiLLM 3.0: An Evidence-Native, Policy-Aware, Multimodal AI Runtime"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+  {name = "Oti Edema"}
+]
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
