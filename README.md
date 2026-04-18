@@ -211,6 +211,8 @@ response = model.query("Why is policy-aware retrieval important?")
 print(response.answer)
 print(model.explain(response))
 
+---
+
 ## Example Output Behaviour
 
 The system produces:
@@ -227,6 +229,7 @@ The system produces:
 
 This makes OtiLLM suitable for applications where transparency and accountability are required.
 
+---
 
 ## Use Cases
 
@@ -238,6 +241,8 @@ OtiLLM is particularly suited for:
 - regulated decision-support systems
 - multimodal intelligence applications
 - auditable AI workflows
+
+---
 
 ## Repository Structure
 
@@ -255,8 +260,12 @@ OtiLLM/
 ├── pyproject.toml
 └── setup.py
 
+---
+
 ## Running Tests
 pytest
+
+---
 
 ## Roadmap
 
@@ -270,7 +279,7 @@ Future versions will extend this release with:
 - domain-specific policy modules
 - advanced memory and retrieval optimisation
 
-
+---
 
 ## Research Positioning
 
@@ -285,12 +294,16 @@ Rather than relying solely on model scale, OtiLLM focuses on:
 
 The framework supports ongoing research into reliable and governed AI systems.
 
+---
+
 ## Author
 
 Oti Edema
 AI/ML Research Engineer and Data Scientist
 
 LinkedIn: https://www.linkedin.com/in/oti-e-34838485/
+
+---
 
 ## Contributing
 
@@ -304,11 +317,15 @@ Areas of interest include:
 - benchmarking and evaluation
 - documentation and examples
 
+---
+
 ## Citation
 
 If you use OtiLLM in research or applied work, please cite the project once the paper is released.
 
 A CITATION.cff file will be included in this repository.
+
+---
 
 ## License
 This project is released under the MIT License.
