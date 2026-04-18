@@ -14,6 +14,22 @@ This repository provides a working, extensible implementation of that architectu
 
 ---
 
+## Architecture Diagram
+
+![OtiLLM Architecture](./docs/otillm_architecture.png)
+
+Figure 1: OtiLLM 0.1.0 Architecture — An Evidence-Native, Policy-Aware AI Runtime integrating retrieval, governance, memory, and explainability into a unified execution pipeline.
+
+The OtiLLM architecture introduces a structured runtime model designed to improve the reliability and governance of AI systems. 
+
+At the core of the system is the Cognitive Orchestrator, which coordinates the interaction between the Evidence Fabric, Policy Engine, and Memory Engine. The Evidence Fabric performs hybrid retrieval using multiple scoring signals, including semantic relevance, keyword overlap, temporal context, and source trust. The Policy Engine enforces governance constraints by evaluating whether a request or action satisfies predefined safety and compliance rules. The Memory Engine implements gated storage, ensuring that only high-quality, policy-compliant, and novel information is retained.
+
+The Explainability Layer provides a transparent trace of system behaviour, capturing evidence sources, confidence levels, and policy decisions. This enables auditability and supports deployment in high-trust environments.
+
+The architecture is designed to support multimodal inputs and modular AI applications, allowing integration with language models, embedding systems, and vector databases. By enforcing a structured flow from input to output, OtiLLM shifts AI system design from loosely coupled pipelines to a controlled, evidence-driven runtime framework.
+
+---
+
 ## The Problem OtiLLM Solves
 
 Modern AI systems frequently fail in high-stakes environments due to:
