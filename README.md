@@ -304,6 +304,12 @@ Areas of interest include:
 - benchmarking and evaluation
 - documentation and examples
 
+## Citation
+
+If you use OtiLLM in research or applied work, please cite the project once the paper is released.
+
+A CITATION.cff file will be included in this repository.
+
 ## License
 This project is released under the MIT License.
 
