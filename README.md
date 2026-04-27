@@ -8,9 +8,47 @@ Evidence-Native, Policy-Aware AI Runtime for Reliable AI Systems
 
 OtiLLM 0.1.0 is the founding open-source release of OtiLLM, a next-generation AI runtime architecture designed to improve the reliability, governance, and explainability of modern AI systems.
 
-While large language models and retrieval systems have advanced significantly, their real-world deployment often exposes fundamental weaknesses. OtiLLM addresses these by restructuring how AI systems operate internally, introducing a runtime in which evidence, policy, memory, and explainability are tightly integrated and enforced.
+While large language models and retrieval systems have advanced significantly, their real-world deployment often exposes fundamental weaknesses. OtiLLM addresses these issues by restructuring how AI systems operate internally, introducing a runtime in which evidence, policy, memory, and explainability are tightly integrated and enforced.
 
 This repository provides a working, extensible implementation of that architecture for researchers, engineers, and organisations building high-trust AI systems.
+
+---
+
+## PyPI
+
+OtiLLM is available on PyPI:
+
+https://pypi.org/project/otillm/
+
+Install using:
+
+```bash
+pip install otillm
+```
+
+---
+
+## Research and Reproducibility
+
+This repository supports the research paper:
+
+**OtiLLM: A Governed Runtime Framework for Reducing Hallucination and Improving Explainability in Large Language Model Systems**
+
+Code repository:
+
+https://github.com/OtiEdema/OtiLLM
+
+PyPI package:
+
+https://pypi.org/project/otillm/
+
+Version used for the paper:
+
+```text
+OtiLLM 0.1.0
+```
+
+The repository is intended to support transparent reproduction, extension, and evaluation of the OtiLLM runtime architecture.
 
 ---
 
@@ -18,11 +56,13 @@ This repository provides a working, extensible implementation of that architectu
 
 ![OtiLLM Architecture](./docs/otillm_architecture.png)
 
-Figure 1: OtiLLM 0.1.0 Architecture — An Evidence-Native, Policy-Aware AI Runtime integrating retrieval, governance, memory, and explainability into a unified execution pipeline.
+**Figure 1: OtiLLM 0.1.0 Architecture** — an evidence-native, policy-aware AI runtime integrating retrieval, governance, memory, and explainability into a unified execution pipeline.
 
-The OtiLLM architecture introduces a structured runtime model designed to improve the reliability and governance of AI systems. 
+The OtiLLM architecture introduces a structured runtime model designed to improve the reliability and governance of AI systems.
 
-At the core of the system is the Cognitive Orchestrator, which coordinates the interaction between the Evidence Fabric, Policy Engine, and Memory Engine. The Evidence Fabric performs hybrid retrieval using multiple scoring signals, including semantic relevance, keyword overlap, temporal context, and source trust. The Policy Engine enforces governance constraints by evaluating whether a request or action satisfies predefined safety and compliance rules. The Memory Engine implements gated storage, ensuring that only high-quality, policy-compliant, and novel information is retained.
+At the core of the system is the Cognitive Orchestrator, which coordinates the interaction between the Evidence Fabric, Policy Engine, and Memory Engine. The Evidence Fabric performs hybrid retrieval using multiple scoring signals, including semantic relevance, keyword overlap, temporal context, and source trust. The Policy Engine enforces governance constraints by evaluating whether a request or action satisfies predefined safety and compliance rules.
+
+The Memory Engine implements gated storage, ensuring that only high-quality, policy-compliant, and novel information is retained.
 
 The Explainability Layer provides a transparent trace of system behaviour, capturing evidence sources, confidence levels, and policy decisions. This enables auditability and supports deployment in high-trust environments.
 
@@ -48,7 +88,9 @@ These limitations are not purely model problems. They are system design problems
 
 OtiLLM introduces a structured runtime in which every meaningful output follows a controlled lifecycle:
 
+```text
 Input → Evidence → Reason → Verify → Align → Act → Explain
+```
 
 This replaces loosely coupled pipelines with a bounded, auditable, and evidence-driven execution model.
 
@@ -57,22 +99,16 @@ This replaces loosely coupled pipelines with a bounded, auditable, and evidence-
 ## How OtiLLM Differs from Existing Approaches
 
 ### Standard LLM Pipelines
-- rely heavily on prompt engineering
-- limited visibility into reasoning
-- no explicit evidence validation
-- no runtime governance
+
+Standard LLM pipelines rely heavily on prompt engineering, provide limited visibility into reasoning, perform no explicit evidence validation, and generally lack runtime governance.
 
 ### Traditional RAG Systems
-- improve factual grounding
-- but often rely on naive retrieval
-- lack policy awareness
-- limited explainability
-- no structured memory control
+
+Traditional Retrieval-Augmented Generation systems improve factual grounding, but often rely on naive retrieval, lack policy awareness, provide limited explainability, and do not include structured memory control.
 
 ### Agent-Based Systems
-- powerful but often unbounded
-- difficult to control or audit
-- prone to unsafe or inconsistent behaviour
+
+Agent-based systems can be powerful, but they are often difficult to bound, control, and audit. This makes them vulnerable to unsafe or inconsistent behaviour in high-trust environments.
 
 ### OtiLLM
 
@@ -96,7 +132,7 @@ A hybrid retrieval layer that evaluates information using multiple signals:
 - keyword overlap
 - temporal freshness
 - graph-aware signals
-- source trust (provenance)
+- source trust and provenance
 
 This enables more reliable evidence selection than standard retrieval pipelines.
 
@@ -108,11 +144,7 @@ This enables safer deployment in regulated and high-trust environments.
 
 ### Memory Engine
 
-A gated memory system that only stores information when it is:
-
-- sufficiently high quality
-- policy-compliant
-- novel
+A gated memory system that only stores information when it is sufficiently high quality, policy-compliant, and novel.
 
 This prevents uncontrolled accumulation and improves long-term reliability.
 
@@ -139,15 +171,17 @@ A built-in tracing system that provides visibility into how each response is gen
 
 OtiLLM is organised as a structured runtime pipeline:
 
+```text
 Multimodal Input
-Perception Layer
-Evidence Fabric
-Cognitive Orchestrator
-Policy Engine
-Memory Engine
-Generator / Action Layer
-Explainability Trace
-Output
+→ Perception Layer
+→ Evidence Fabric
+→ Cognitive Orchestrator
+→ Policy Engine
+→ Memory Engine
+→ Generator / Action Layer
+→ Explainability Trace
+→ Output
+```
 
 This design enables controlled, interpretable, and verifiable AI behaviour.
 
@@ -185,10 +219,16 @@ Instead, it establishes the architectural and implementation foundation required
 
 ## Installation
 
+Install from PyPI:
+
+```bash
+pip install otillm
+```
+
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/OtiLLM.git
+git clone https://github.com/OtiEdema/OtiLLM.git
 cd OtiLLM
 ```
 
@@ -235,10 +275,7 @@ print(model.explain(response))
 
 ## Example Output Behaviour
 
-The system produces:
-
-1. A grounded response based on retrieved evidence
-2. A detailed trace explaining:
+The system produces a grounded response based on retrieved evidence and a detailed trace explaining:
 
 - which sources were used
 - how they were scored
@@ -269,6 +306,8 @@ OtiLLM is particularly suited for:
 
 ```text
 OtiLLM/
+├── docs/
+│   └── otillm_architecture.png
 ├── otillm/
 │   ├── core/
 │   ├── evidence/
@@ -322,9 +361,25 @@ The framework supports ongoing research into reliable and governed AI systems.
 
 ---
 
+## Citation
+
+If you use OtiLLM in academic work, please cite the repository and the accompanying paper when available.
+
+```bibtex
+@software{edema2026otillm,
+  author = {Edema, Oritsetimeyin},
+  title = {OtiLLM: Evidence-Native, Policy-Aware AI Runtime},
+  year = {2026},
+  version = {0.1.0},
+  url = {https://github.com/OtiEdema/OtiLLM}
+}
+```
+
+---
+
 ## Author
 
-Oti Edema
+Oti Edema  
 AI/ML Research Engineer and Data Scientist
 
 LinkedIn: https://www.linkedin.com/in/oti-e-34838485/

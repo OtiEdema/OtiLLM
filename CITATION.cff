@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use OtiLLM in your research, please cite it using this metadata."
+title: "OtiLLM: Evidence-Native, Policy-Aware AI Runtime"
+version: "0.1.0"
+date-released: "2026-04-18"
+authors:
+  - family-names: "Edema"
+    given-names: "Oritsetimeyin"
+repository-code: "https://github.com/OtiEdema/OtiLLM"
+url: "https://pypi.org/project/otillm/"
+license: "MIT"
+keywords:
+  - large-language-models
+  - trustworthy-ai
+  - explainable-ai
+  - retrieval-augmented-generation
+  - policy-aware-ai
+  - runtime-governance
