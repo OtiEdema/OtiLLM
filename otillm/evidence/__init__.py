@@ -1,7 +1,3 @@
-"""Evidence fabric exports."""
+from .fabric import EvidenceFabric, EvidenceItem
 
-from .store import EvidenceStore
-from .retrieval import EvidenceRetriever
-from .fusion import EvidenceFusionEngine
-
-__all__ = ["EvidenceStore", "EvidenceRetriever", "EvidenceFusionEngine"]
+__all__ = ["EvidenceFabric", "EvidenceItem"]

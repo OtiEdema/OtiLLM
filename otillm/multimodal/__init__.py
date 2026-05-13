@@ -1,5 +1,4 @@
-"""Multimodal perception exports."""
+"""Future-ready multimodal adapters for OtiLLM."""
+from .adapters import VisionAdapter, AudioAdapter, StructuredDataAdapter
 
-from .perception import PerceptionEngine
-
-__all__ = ["PerceptionEngine"]
+__all__ = ["VisionAdapter", "AudioAdapter", "StructuredDataAdapter"]
