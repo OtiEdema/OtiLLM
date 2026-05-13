@@ -1,0 +1,20 @@
+experiment:
+  name: otillm_v2_4_jair_eval
+  seed: 42
+  output_dir: results
+
+systems:
+  - direct_llm
+  - standard_rag
+  - strong_rag
+  - react_agent
+  - self_checking_llm
+  - otillm_balanced
+
+metrics:
+  - accuracy
+  - truthfulness
+  - faithfulness
+  - unsupported_claim_rate
+  - refusal_accuracy
+  - trace_completeness

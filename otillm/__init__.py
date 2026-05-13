@@ -1,29 +1,18 @@
-"""Top-level package for OtiLLM 0.1.0.
+"""OtiLLM v2.4: Governed Cognitive Runtime."""
 
-This module exposes the main runtime class and key data structures so that
-users can import them directly from `otillm`.
-"""
+from otillm.runtime import GovernedRuntime, RuntimeState, RuntimeResult
+from otillm.governance import PolicyEngine, GovernanceState
+from otillm.retrieval import RetrievalReconsiderationEngine
+from otillm.explainability import ERRGBuilder
 
-from .config import OtiConfig
-from .types import (
-    EvidenceObject,
-    PolicyDecision,
-    QueryRequest,
-    QueryResponse,
-    RetrievedEvidence,
-    RuntimeTrace,
-)
-from .runtime import OtiLLM
+__version__ = "0.2.0"
 
 __all__ = [
-    "OtiConfig",
-    "EvidenceObject",
-    "PolicyDecision",
-    "QueryRequest",
-    "QueryResponse",
-    "RetrievedEvidence",
-    "RuntimeTrace",
-    "OtiLLM",
+    "GovernedRuntime",
+    "RuntimeState",
+    "RuntimeResult",
+    "PolicyEngine",
+    "GovernanceState",
+    "RetrievalReconsiderationEngine",
+    "ERRGBuilder",
 ]
-
-__version__ = "0.1.0"

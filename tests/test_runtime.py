@@ -1,10 +1,8 @@
-from otillm import OtiLLM
+from otillm.runtime import GovernedRuntime
 
-
-def test_runtime_returns_explanation_trace():
-    model = OtiLLM()
-    model.add_evidence("OtiLLM is evidence-native.", source="doc1", trust_score=0.9)
-    response = model.query("What is OtiLLM?")
-    explanation = model.explain(response)
-    assert "OtiLLM Trace Report" in explanation
-    assert "Retrieved Sources" in explanation
+def test_runtime_returns_result():
+    runtime = GovernedRuntime()
+    result = runtime.run("Who wrote Pride and Prejudice?")
+    assert result.answer
+    assert result.action in {"answer", "clarify", "refuse", "reconsider_retrieval"}
+    assert result.trace.to_dict()["nodes"]

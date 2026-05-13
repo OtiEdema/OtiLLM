@@ -1,32 +1,39 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "otillm"
-version = "0.1.0"
-description = "OtiLLM 0.1.0: Evidence-native, policy-aware AI runtime for reliable AI systems"
+version = "0.2.0"
+description = "OtiLLM v2.4: A governed cognitive runtime for evidence-native, memory-augmented and explainable frontier AI systems."
 readme = "README.md"
 requires-python = ">=3.9"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
-    { name = "Oti Edema" }
+  {name = "Oti Edema"}
 ]
-dependencies = []
+keywords = [
+  "large-language-models",
+  "retrieval-augmented-generation",
+  "explainable-ai",
+  "ai-governance",
+  "runtime-orchestration",
+  "trustworthy-ai"
+]
+dependencies = [
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "pyyaml>=6.0",
+  "tqdm>=4.66"
+]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0"
+  "pytest>=7.0",
+  "matplotlib>=3.8",
+  "scipy>=1.11"
 ]
 
-[project.urls]
-Homepage = "https://github.com/OtiEdema/OtiLLM"
-Repository = "https://github.com/OtiEdema/OtiLLM"
-Issues = "https://github.com/OtiEdema/OtiLLM/issues"
-PyPI = "https://pypi.org/project/otillm/"
-
-[tool.setuptools]
-license-files = ["LICENSE"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["otillm*"]
