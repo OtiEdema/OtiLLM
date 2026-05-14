@@ -1,6 +1,8 @@
 # OtiLLM v2.4  
 ## A Governed Cognitive Runtime for Evidence-Native, Memory-Augmented and Explainable Frontier AI Systems
 
+[![PyPI version](https://badge.fury.io/py/otillm.svg)](https://pypi.org/project/otillm/)
+
 OtiLLM is a research-grade governed cognitive runtime framework designed to make Large Language Model systems more reliable, explainable, evidence-aware, and operationally trustworthy.
 
 Unlike conventional Retrieval-Augmented Generation (RAG), agentic orchestration, or guardrail-based systems, OtiLLM treats inference as a governed runtime process rather than a simple prompt-to-response operation.
@@ -42,8 +44,15 @@ OtiLLM introduces confidence-aware and governance-constrained memory persistence
 The Explainable Runtime Reasoning Graph (ERRG) captures structured runtime provenance across evidence, governance, uncertainty, memory, and reasoning transitions.
 
 ---
-
 ## Installation
+
+```bash
+pip install otillm
+```
+
+PyPI package:
+https://pypi.org/project/otillm/0.2.0/
+
 
 Install from source:
 
