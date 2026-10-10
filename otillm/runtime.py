@@ -1,6 +1,6 @@
 """Main public runtime wrapper for OtiLLM v2.0."""
 
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 from otillm.config import OtiConfig
 from otillm.core import CognitiveOrchestrator, GeneratorEngine, MemoryEngine, PolicyEngine
@@ -11,9 +11,14 @@ from otillm.types import EvidenceObject, QueryRequest, QueryResponse
 
 
 class OtiLLM:
-    """Main entrypoint for the OtiLLM v2.0 runtime."""
+    """Main entry point for the OtiLLM v2.0 runtime.
 
-    def __init__(self, config: Optional[OtiConfig] = None) -> None:
+    generator_backend is optional. The JAIR publication harness injects the
+    same model backend used by the comparison systems. Without it, OtiLLM uses a
+    deterministic offline generator suitable for tests, not publication results.
+    """
+
+    def __init__(self, config: Optional[OtiConfig] = None, generator_backend: Optional[Any] = None) -> None:
         self.config = config or OtiConfig()
         self.perception = PerceptionEngine()
         self.store = EvidenceStore()
@@ -21,7 +26,7 @@ class OtiLLM:
         self.memory_engine = MemoryEngine(self.config)
         self.retriever = EvidenceRetriever(self.config)
         self.fusion_engine = EvidenceFusionEngine()
-        self.generator = GeneratorEngine()
+        self.generator = GeneratorEngine(backend=generator_backend)
         self.orchestrator = CognitiveOrchestrator(
             config=self.config,
             policy_engine=self.policy_engine,
@@ -33,14 +38,12 @@ class OtiLLM:
         self.trace_formatter = TraceFormatter()
 
     def add_evidence(self, content: str, modality: str = "text", source: str = "inline", trust_score: float = 0.5) -> EvidenceObject:
-        """Add one item into the evidence fabric."""
         evidence = self.perception.ingest(content, modality=modality, source=source)
         evidence.trust_score = trust_score
         self.store.add(evidence)
         return evidence
 
     def add_evidence_batch(self, items: Iterable[dict]) -> None:
-        """Add a batch of evidence items."""
         for item in items:
             self.add_evidence(
                 content=item["content"],
@@ -50,10 +53,15 @@ class OtiLLM:
             )
 
     def query(self, query: str, mode: str = "balanced", user_id: Optional[str] = None, session_id: Optional[str] = None) -> QueryResponse:
-        """Query the runtime and return a structured response."""
+        """Query the runtime and return a structured response.
+
+        The current public controller records mode in the request but does not yet
+        implement experimentally distinct Minimal/Balanced/Full control policies.
+        Publication experiments therefore enable only Balanced until mode-specific
+        behaviour is implemented and tested.
+        """
         request = QueryRequest(query=query, mode=mode, user_id=user_id, session_id=session_id)
         return self.orchestrator.run(request=request, corpus=self.store.all())
 
     def explain(self, response: QueryResponse) -> str:
-        """Return a formatted explanation of a prior response."""
         return self.trace_formatter.explain(response)
