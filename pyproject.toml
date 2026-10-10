@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "otillm"
 version = "0.2.0"
-description = "OtiLLM v2.4: A governed cognitive runtime for evidence-native, memory-augmented and explainable frontier AI systems."
+description = "OtiLLM v2.0: a governed cognitive runtime for evidence-aware, policy-constrained and traceable LLM systems."
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-  {name = "Oti Edema"}
+  {name = "Oritsetimeyin Edema"}
 ]
 keywords = [
   "large-language-models",
