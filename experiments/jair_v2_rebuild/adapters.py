@@ -1,6 +1,7 @@
 """System adapters for the unified JAIR harness."""
 
 from dataclasses import asdict
+from datetime import datetime
 from time import perf_counter
 from typing import Dict, List
 
@@ -18,10 +19,20 @@ class OtiLLMAdapter:
 
         runtime = OtiLLM(generator_backend=self.backend)
         for item in evidence:
+            metadata = dict(item.get("metadata") or {})
+            timestamp = metadata.get("timestamp") or item.get("timestamp")
+            parsed_timestamp = None
+            if isinstance(timestamp, str) and timestamp:
+                try:
+                    parsed_timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                except ValueError:
+                    metadata["timestamp_parse_error"] = timestamp
             runtime.add_evidence(
                 content=item["content"],
                 source=item.get("source", "manifest"),
                 trust_score=float(item.get("trust_score", 0.5)),
+                metadata=metadata,
+                timestamp=parsed_timestamp,
             )
 
         start = perf_counter()
