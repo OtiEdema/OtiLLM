@@ -21,8 +21,9 @@ controller behaviour is genuinely distinct in executable code.
 ## Common backend
 
 Primary generator: Qwen/Qwen3-8B, pinned in configs/backend.json, non-thinking
-mode. All model-based systems use the same revision, generation limits and
-temperature unless a sensitivity analysis explicitly varies them.
+mode. All model-based systems use the same revision and deterministic greedy
+decoding (temperature 0.0) with a 256-token generation cap. Any stochastic
+sensitivity analysis is reported separately from the primary results.
 
 ## Benchmark sample
 
