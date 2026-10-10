@@ -1,20 +1,20 @@
 """System adapters for the unified JAIR harness."""
 
 from dataclasses import asdict
-from datetime import datetime, timezone
 from time import perf_counter
 from typing import Dict, List
 
 
 class OtiLLMAdapter:
-    def __init__(self, name: str, mode: str):
+    def __init__(self, name: str, mode: str, backend):
         self.name = name
         self.mode = mode
+        self.backend = backend
 
     def run(self, record: Dict, evidence: List[Dict]) -> Dict:
         from otillm.runtime import OtiLLM
 
-        runtime = OtiLLM()
+        runtime = OtiLLM(generator_backend=self.backend)
         for item in evidence:
             runtime.add_evidence(
                 content=item["content"],
@@ -36,7 +36,7 @@ class OtiLLMAdapter:
             "evidence_sufficiency": response.trace.evidence_sufficiency,
             "confidence": response.trace.confidence,
             "latency_seconds": elapsed,
-            "llm_calls": 0,
+            "llm_calls": 1 if response.trace.action_taken == "EXECUTE" else 0,
             "retrieval_calls": 1,
             "input_tokens": None,
             "output_tokens": None,
@@ -45,11 +45,9 @@ class OtiLLMAdapter:
 
 
 class ExternalAdapter:
-    def __init__(self, name: str):
+    def __init__(self, name: str, impl):
         self.name = name
+        self.impl = impl
 
     def run(self, record: Dict, evidence: List[Dict]) -> Dict:
-        raise RuntimeError(
-            f"System '{self.name}' has no reproducible adapter configured. "
-            "Enable it only after its exact model, prompt, retrieval and stopping rules are archived."
-        )
+        return self.impl.run(record, evidence)
