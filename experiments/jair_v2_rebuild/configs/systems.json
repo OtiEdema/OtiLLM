@@ -1,0 +1,14 @@
+{
+  "systems": [
+    {"name": "direct_llm", "adapter": "external", "enabled": false},
+    {"name": "prompt_chain", "adapter": "external", "enabled": false},
+    {"name": "standard_rag", "adapter": "external", "enabled": false},
+    {"name": "strong_rag", "adapter": "external", "enabled": false},
+    {"name": "self_checking_llm", "adapter": "external", "enabled": false},
+    {"name": "guardrail_llm", "adapter": "external", "enabled": false},
+    {"name": "react_agent", "adapter": "external", "enabled": false},
+    {"name": "otillm_minimal", "adapter": "otillm", "mode": "minimal", "enabled": true},
+    {"name": "otillm_balanced", "adapter": "otillm", "mode": "balanced", "enabled": true},
+    {"name": "otillm_full", "adapter": "otillm", "mode": "full", "enabled": true}
+  ]
+}
