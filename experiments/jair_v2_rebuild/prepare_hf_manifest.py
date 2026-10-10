@@ -222,7 +222,7 @@ def parse_fever_lines(lines: str) -> Dict[int, str]:
 
 
 def fever(n: int, seed: int) -> List[Dict]:
-    claims = load_dataset("EleutherAI/fever", "v1.0", split="dev")
+    claims = load_dataset("EleutherAI/fever", "v1.0", split="dev", trust_remote_code=True)
     # FEVER has repeated rows per evidence annotation. Group by claim id.
     grouped = {}
     for r in claims:
@@ -245,7 +245,7 @@ def fever(n: int, seed: int) -> List[Dict]:
     if wanted_pages:
         wiki = load_dataset(
             "EleutherAI/fever", "wiki_pages",
-            split="wikipedia_pages", streaming=True
+            split="wikipedia_pages", streaming=True, trust_remote_code=True
         )
         remaining = set(wanted_pages)
         for page in wiki:
