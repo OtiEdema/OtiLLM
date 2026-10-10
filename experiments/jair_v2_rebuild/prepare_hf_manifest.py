@@ -310,7 +310,7 @@ def fever(n: int, seed: int) -> List[Dict]:
     # Deterministically oversample so unresolved legacy page ids can be skipped
     # without changing the sampling rule after observing model outputs.
     rows = list(grouped.values())
-    pool_n = min(len(rows), max(n + 50, int(n * 1.5)))
+    pool_n = min(len(rows), max(n + 500, int(n * 5)))
     selected_pool = take_hash_sample(
         rows, pool_n, "fever", seed, lambda r: r["id"]
     )
