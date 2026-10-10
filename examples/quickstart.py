@@ -1,4 +1,4 @@
-"""Quickstart example for OtiLLM 3.0."""
+"""Quickstart example for OtiLLM v2.0."""
 
 from otillm import OtiLLM
 
