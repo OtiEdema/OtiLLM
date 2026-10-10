@@ -19,18 +19,12 @@ def evidence_block(evidence: List[Dict], limit: int = 5) -> str:
 
 
 class BaseAdapter:
-    def __init__(self, name: str, backend: ModelBackend, temperature: float = 0.2, max_tokens: int = 512):
+    def __init__(self, name: str, backend: ModelBackend):
         self.name = name
         self.backend = backend
-        self.temperature = temperature
-        self.max_tokens = max_tokens
 
     def _call(self, prompt: str):
-        return self.backend.generate(
-            prompt,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-        )
+        return self.backend.generate(prompt)
 
     @staticmethod
     def _pack(name, result, trace, *, llm_calls, retrieval_calls):
