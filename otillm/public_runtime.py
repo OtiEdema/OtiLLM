@@ -1,6 +1,7 @@
 """Public OtiLLM v2.0 runtime wrapper used by the JAIR rebuild."""
 
-from typing import Any, Iterable, Optional
+from datetime import datetime
+from typing import Any, Dict, Iterable, Optional
 
 from otillm.config import OtiConfig
 from otillm.core import CognitiveOrchestrator, GeneratorEngine, MemoryEngine, PolicyEngine
@@ -36,9 +37,21 @@ class OtiLLM:
         )
         self.trace_formatter = TraceFormatter()
 
-    def add_evidence(self, content: str, modality: str = "text", source: str = "inline", trust_score: float = 0.5) -> EvidenceObject:
+    def add_evidence(
+        self,
+        content: str,
+        modality: str = "text",
+        source: str = "inline",
+        trust_score: float = 0.5,
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime] = None,
+    ) -> EvidenceObject:
         evidence = self.perception.ingest(content, modality=modality, source=source)
         evidence.trust_score = trust_score
+        if metadata:
+            evidence.metadata.update(metadata)
+        if timestamp is not None:
+            evidence.timestamp = timestamp
         self.store.add(evidence)
         return evidence
 
@@ -49,6 +62,8 @@ class OtiLLM:
                 modality=item.get("modality", "text"),
                 source=item.get("source", "batch"),
                 trust_score=item.get("trust_score", 0.5),
+                metadata=item.get("metadata"),
+                timestamp=item.get("timestamp"),
             )
 
     def query(self, query: str, mode: str = "balanced", user_id: Optional[str] = None, session_id: Optional[str] = None) -> QueryResponse:
