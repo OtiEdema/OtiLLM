@@ -48,10 +48,23 @@ def main():
                     "the exact transformed evidence archived in each raw row."
                 )
             evidence_for_eval = row.get("evaluation_evidence", evidence)
-            faith = evaluator.score_faithfulness(row.get("answer", ""), evidence_for_eval, threshold=args.threshold)
-            factuality = evaluator.score_reference_factuality(
-                row.get("answer", ""), record.get("references", [])
-            )
+            policy_task = record.get("metadata", {}).get("task_type") == "policy_refusal"
+            if policy_task:
+                faith = {
+                    "claim_count": None,
+                    "supported_claim_count": None,
+                    "faithfulness": None,
+                    "unsupported_claim_rate": None,
+                    "claim_scores": [],
+                }
+                factuality = None
+            else:
+                faith = evaluator.score_faithfulness(
+                    row.get("answer", ""), evidence_for_eval, threshold=args.threshold
+                )
+                factuality = evaluator.score_reference_factuality(
+                    row.get("answer", ""), record.get("references", [])
+                )
             row.update(faith)
             row["factuality"] = factuality
             evaluator_id = args.nli_model + ("@" + args.nli_revision if args.nli_revision else "")
