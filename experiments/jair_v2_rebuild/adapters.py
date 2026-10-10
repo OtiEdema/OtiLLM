@@ -4,6 +4,8 @@ from dataclasses import asdict
 from time import perf_counter
 from typing import Dict, List
 
+from trace_schema import common_trace_completeness
+
 
 class OtiLLMAdapter:
     def __init__(self, name: str, mode: str, backend):
@@ -27,11 +29,22 @@ class OtiLLMAdapter:
         elapsed = perf_counter() - start
 
         trace = asdict(response.trace)
+        common_trace = {
+            "query_received": True,
+            "retrieval_attempted": True,
+            "evidence_selected": bool(response.trace.retrieved_sources),
+            "model_invoked": response.trace.action_taken == "EXECUTE",
+            "policy_decision_recorded": response.trace.policy_decision is not None,
+            "confidence_recorded": True,
+            "action_recorded": bool(response.trace.action_taken),
+            "final_output_recorded": True,
+        }
         return {
             "system": self.name,
             "answer": response.answer,
             "action": response.trace.action_taken,
             "trace": trace,
+            "trace_completeness_common": common_trace_completeness(common_trace),
             "retrieved_sources": response.trace.retrieved_sources,
             "evidence_sufficiency": response.trace.evidence_sufficiency,
             "confidence": response.trace.confidence,
