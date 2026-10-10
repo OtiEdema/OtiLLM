@@ -1,6 +1,7 @@
 """Run checkpointed deterministic retrieval-stress experiments."""
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -13,7 +14,8 @@ from baseline_adapters import (
 from metrics import exact_match, faithfulness_placeholder, refusal_metrics, token_f1
 from perturbations import transform
 
-CONDITIONS = ["clean", "noisy", "contradictory", "incomplete", "adversarial", "stale"]
+ALL_CONDITIONS = ["clean", "noisy", "contradictory", "incomplete", "adversarial", "stale"]
+DEFAULT_STRESS_CONDITIONS = ["noisy", "contradictory", "incomplete", "adversarial", "stale"]
 BASELINES = {
     "direct_llm": DirectLLMAdapter,
     "prompt_chain": PromptChainAdapter,
@@ -61,6 +63,11 @@ def completed_keys(path: Path):
     return done
 
 
+def shard_for(record_id: str, num_shards: int) -> int:
+    digest = hashlib.sha256(str(record_id).encode("utf-8")).hexdigest()
+    return int(digest, 16) % num_shards
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--manifest", required=True)
@@ -68,11 +75,36 @@ def main():
     p.add_argument("--backend", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--resume", action="store_true")
+    p.add_argument("--num-shards", type=int, default=1)
+    p.add_argument("--shard-index", type=int, default=0)
+    p.add_argument(
+        "--conditions",
+        nargs="+",
+        default=DEFAULT_STRESS_CONDITIONS,
+        choices=ALL_CONDITIONS,
+        help=(
+            "Stress conditions to execute. Default omits clean because clean "
+            "retrieval-system observations are already generated in Phase A."
+        ),
+    )
     args = p.parse_args()
+
+    if args.num_shards < 1:
+        p.error("--num-shards must be >= 1")
+    if not 0 <= args.shard_index < args.num_shards:
+        p.error("--shard-index must satisfy 0 <= index < num_shards")
 
     backend = load_backend(args.backend)
     systems = load_systems(args.systems, backend)
-    records = load_jsonl(args.manifest)
+    records = [
+        r for r in load_jsonl(args.manifest)
+        if shard_for(r["id"], args.num_shards) == args.shard_index
+    ]
+    print(
+        f"shard={args.shard_index}/{args.num_shards} "
+        f"records_in_shard={len(records)} "
+        f"conditions={','.join(args.conditions)}"
+    )
 
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,7 +118,7 @@ def main():
             if record.get("metadata", {}).get("task_type") == "policy_refusal":
                 continue
 
-            for condition in CONDITIONS:
+            for condition in args.conditions:
                 evidence, perturbation_log = transform(record, condition)
                 for adapter in systems:
                     key = (record["id"], adapter.name, condition)
