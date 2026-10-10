@@ -1,8 +1,9 @@
-datasets>=2.18
-transformers>=4.51
+datasets==2.21.0
+transformers>=4.51,<5
 torch>=2.1
 accelerate>=1.0
 scipy>=1.11
 
-# Freeze exact versions after the publication environment is provisioned.
-# Model and evaluator revisions are independently pinned in configs/.
+# datasets 2.21.0 is pinned because FEVER is distributed through a dataset
+# loading script that is not supported by the newer datasets 5.x loader.
+# Freeze the remaining exact versions in the final archival environment.
