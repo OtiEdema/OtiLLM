@@ -155,8 +155,46 @@ def nq_short_answers(record: Dict) -> List[str]:
     return refs
 
 
+def nq_first_long_answer_span(record: Dict):
+    """Return the first valid Natural Questions long-answer token span."""
+    annotations = record.get("annotations", []) or []
+
+    if isinstance(annotations, dict):
+        la = annotations.get("long_answer") or annotations.get("long_answers") or {}
+        if isinstance(la, dict):
+            starts = la.get("start_token", []) or []
+            ends = la.get("end_token", []) or []
+            if not isinstance(starts, list):
+                starts = [starts]
+            if not isinstance(ends, list):
+                ends = [ends]
+            for s, e in zip(starts, ends):
+                if isinstance(s, int) and isinstance(e, int) and s >= 0 and e > s:
+                    return s, e
+
+    if isinstance(annotations, list):
+        for ann in annotations:
+            la = ann.get("long_answer") or ann.get("long_answers") or {}
+            if isinstance(la, dict):
+                s, e = la.get("start_token"), la.get("end_token")
+                if isinstance(s, int) and isinstance(e, int) and s >= 0 and e > s:
+                    return s, e
+    return None
+
+
+def nq_token_arrays(document: Dict):
+    tokens = document.get("tokens", []) or []
+    if isinstance(tokens, dict):
+        text = list(tokens.get("token", []) or [])
+        html_flags = list(tokens.get("is_html", []) or [False] * len(text))
+        return text, html_flags
+    text = [x.get("token", "") for x in tokens]
+    html_flags = [bool(x.get("is_html", False)) for x in tokens]
+    return text, html_flags
+
+
 def natural_questions(n: int, seed: int) -> List[Dict]:
-    # Stream validation to avoid materialising the large document corpus.
+    """Build NQ items with bounded gold long-answer evidence, not full documents."""
     ds = load_dataset(
         "google-research-datasets/natural_questions",
         "default",
@@ -176,22 +214,43 @@ def natural_questions(n: int, seed: int) -> List[Dict]:
     for r in sample:
         refs = nq_short_answers(r)
         doc = r.get("document", {}) or {}
-        tokens = doc.get("tokens", []) or []
-        if isinstance(tokens, dict):
-            tok_text = tokens.get("token", []) or []
-            is_html = tokens.get("is_html", []) or [False] * len(tok_text)
-            clean_tokens = [t for t, h in zip(tok_text, is_html) if not h]
+        tok_text, is_html = nq_token_arrays(doc)
+        span = nq_first_long_answer_span(r)
+
+        if span is not None:
+            start_token, end_token = span
+            selected = [
+                t for t, h in zip(
+                    tok_text[start_token:end_token],
+                    is_html[start_token:end_token],
+                )
+                if t and not h
+            ]
+            evidence_scope = "annotated_long_answer"
         else:
-            clean_tokens = [x.get("token", "") for x in tokens if not x.get("is_html", False)]
-        evidence_text = " ".join(t for t in clean_tokens if t).strip()
-        eid = f"{r['id']}::document"
+            # Conservative fallback: bounded opening context rather than the
+            # entire Wikipedia document, which would create incomparable prompt
+            # lengths and exceed model context on some examples.
+            selected = [t for t, h in zip(tok_text[:512], is_html[:512]) if t and not h]
+            start_token, end_token = 0, min(512, len(tok_text))
+            evidence_scope = "bounded_document_fallback"
+
+        evidence_text = " ".join(selected).strip()
+        eid = f"{r['id']}::evidence"
         evidence = [{
             "id": eid,
             "content": evidence_text,
             "source": doc.get("url") or doc.get("title") or "natural_questions_document",
             "trust_score": 1.0,
-            "metadata": {"title": doc.get("title"), "url": doc.get("url")},
+            "metadata": {
+                "title": doc.get("title"),
+                "url": doc.get("url"),
+                "start_token": start_token,
+                "end_token": end_token,
+                "evidence_scope": evidence_scope,
+            },
         }] if evidence_text else []
+
         q = r.get("question", {})
         query = q.get("text") if isinstance(q, dict) else str(q)
         out.append({
@@ -202,7 +261,11 @@ def natural_questions(n: int, seed: int) -> List[Dict]:
             "evidence_clean": evidence,
             "gold_evidence_ids": [eid] if evidence else [],
             "policy_label": "answer",
-            "metadata": {"document_url": doc.get("url"), "document_title": doc.get("title")},
+            "metadata": {
+                "document_url": doc.get("url"),
+                "document_title": doc.get("title"),
+                "evidence_scope": evidence_scope,
+            },
         })
     return out
 
