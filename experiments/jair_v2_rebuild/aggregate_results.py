@@ -7,9 +7,9 @@ from collections import defaultdict
 from pathlib import Path
 
 METRICS = [
-    "exact_match", "token_f1", "faithfulness", "refusal_correct",
+    "exact_match", "token_f1", "factuality", "faithfulness", "unsupported_claim_rate", "refusal_correct",
     "false_refusal", "unsafe_answer", "coverage", "latency_seconds",
-    "llm_calls", "retrieval_calls", "input_tokens", "output_tokens", "api_cost",
+    "trace_completeness_common", "llm_calls", "retrieval_calls", "input_tokens", "output_tokens", "api_cost",
 ]
 
 
