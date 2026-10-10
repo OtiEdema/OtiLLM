@@ -10,9 +10,12 @@ FEVER wiki-pages configuration.
 """
 
 import argparse
+import csv
 import hashlib
 import heapq
+import io
 import json
+import urllib.request
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
@@ -404,44 +407,57 @@ def fever(n: int, seed: int) -> List[Dict]:
     return out
 
 def xstest(seed: int) -> List[Dict]:
-    """Load the complete XSTest suite for refusal calibration.
+    """Load the canonical XSTest CSV from the original public GitHub repository.
 
-    XSTest contains 250 safe prompts and 200 unsafe contrast prompts. The full
-    450-item test suite is retained because it is small and specifically designed
-    to measure both exaggerated safety and under-refusal.
+    The source is pinned to an immutable commit to avoid relying on a gated
+    Hugging Face mirror and to preserve exact benchmark provenance.
     """
-    ds = load_dataset("walledai/XSTest", split="test")
+    commit = "d7bb5bd738c1fcbc36edd83d5e7d1b71a3e2d84d"
+    url = (
+        "https://raw.githubusercontent.com/paul-rottger/xstest/"
+        f"{commit}/xstest_prompts.csv"
+    )
+    with urllib.request.urlopen(url, timeout=60) as resp:
+        raw = resp.read().decode("utf-8-sig")
+
+    reader = csv.DictReader(io.StringIO(raw))
     out = []
-    for idx, r in enumerate(ds):
-        label = str(r.get("label", "")).strip().lower()
-        if label not in {"safe", "unsafe"}:
-            continue
-        prompt = r.get("prompt")
-        if not prompt:
+    for row in reader:
+        label = str(row.get("label", "")).strip().lower()
+        prompt = str(row.get("prompt", "")).strip()
+        rid = str(row.get("id", "")).strip()
+        if label not in {"safe", "unsafe"} or not prompt or not rid:
             continue
         out.append({
-            "id": f"xstest_{idx:04d}",
+            "id": f"xstest_{int(rid):04d}",
             "dataset": "xstest",
             "query": prompt,
-            # References are retained only to satisfy the common manifest schema;
-            # answer correctness metrics are disabled for this policy benchmark.
             "references": [label.upper()],
             "evidence_clean": [],
             "gold_evidence_ids": [],
             "policy_label": "answer" if label == "safe" else "refuse",
             "metadata": {
                 "xstest_label": label,
-                "type": r.get("type"),
-                "focus": r.get("focus"),
-                "note": r.get("note"),
+                "type": row.get("type"),
+                "focus": row.get("focus"),
+                "note": row.get("note"),
                 "task_type": "policy_refusal",
+                "source_commit": commit,
             },
         })
-    # Stable order independent of upstream row order.
-    return sorted(
-        out,
-        key=lambda r: rank_key("xstest", r["query"], seed),
-    )
+
+    if len(out) != 450:
+        raise RuntimeError(f"Canonical XSTest source yielded {len(out)} rows; expected 450.")
+
+    safe = sum(r["metadata"]["xstest_label"] == "safe" for r in out)
+    unsafe = sum(r["metadata"]["xstest_label"] == "unsafe" for r in out)
+    if safe != 250 or unsafe != 200:
+        raise RuntimeError(
+            f"Canonical XSTest class counts changed: safe={safe}, unsafe={unsafe}; "
+            "expected safe=250, unsafe=200."
+        )
+
+    return sorted(out, key=lambda r: rank_key("xstest", r["id"], seed))
 
 
 def write_jsonl(rows: Sequence[Dict], path: Path):
