@@ -1,9 +1,12 @@
 {
-  "kind": "unconfigured",
-  "provider": null,
-  "model": null,
-  "model_version_or_snapshot": null,
+  "kind": "transformers",
+  "provider": "huggingface-transformers-local",
+  "model": "Qwen/Qwen3-8B",
+  "revision": "a0809d1efaf104a46bbc2acaecd69617e9696312",
+  "licence": "Apache-2.0",
+  "device_map": "auto",
+  "enable_thinking": false,
   "temperature": 0.2,
   "max_tokens": 512,
-  "notes": "Fill with the exact common publication backend before enabling model-based baselines. Do not infer the backend from the old manuscript."
+  "notes": "Primary reproducible common backend proposed for the JAIR rebuild. All model-based systems must use this same pinned revision unless a separate cross-backend robustness experiment is explicitly reported."
 }
