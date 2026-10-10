@@ -21,6 +21,68 @@ class ModelBackend(Protocol):
     def generate(self, prompt: str, *, temperature: float = 0.2, max_tokens: int = 512) -> GenerationResult: ...
 
 
+class TransformersBackend:
+    """Pinned local Hugging Face backend for publication experiments."""
+
+    def __init__(self, model: str, revision: str | None = None, device_map: str = "auto", enable_thinking: bool = False):
+        try:
+            import torch
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+        except ImportError as e:
+            raise RuntimeError("Install transformers, torch and accelerate for the publication backend.") from e
+        self.torch = torch
+        self.name = f"{model}@{revision or 'main'}"
+        self.model_id = model
+        self.revision = revision
+        self.enable_thinking = enable_thinking
+        self.tokenizer = AutoTokenizer.from_pretrained(model, revision=revision)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model,
+            revision=revision,
+            torch_dtype="auto",
+            device_map=device_map,
+        )
+
+    def generate(self, prompt: str, *, temperature: float = 0.2, max_tokens: int = 512) -> GenerationResult:
+        from time import perf_counter
+
+        messages = [{"role": "user", "content": prompt}]
+        text = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=self.enable_thinking,
+        )
+        model_inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
+        input_tokens = int(model_inputs.input_ids.shape[-1])
+
+        do_sample = temperature > 0
+        kwargs = {
+            "max_new_tokens": max_tokens,
+            "do_sample": do_sample,
+        }
+        if do_sample:
+            kwargs["temperature"] = temperature
+            kwargs["top_p"] = 0.8
+
+        start = perf_counter()
+        with self.torch.inference_mode():
+            generated_ids = self.model.generate(**model_inputs, **kwargs)
+        latency = perf_counter() - start
+
+        output_ids = generated_ids[0][input_tokens:]
+        output_tokens = int(output_ids.shape[-1])
+        answer = self.tokenizer.decode(output_ids, skip_special_tokens=True).strip()
+        return GenerationResult(
+            text=answer,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            latency_seconds=latency,
+            api_cost=0.0,
+            raw={"model": self.name, "enable_thinking": self.enable_thinking},
+        )
+
+
 class UnconfiguredBackend:
     name = "unconfigured"
     def generate(self, prompt: str, *, temperature: float = 0.2, max_tokens: int = 512) -> GenerationResult:
@@ -49,6 +111,13 @@ def load_backend(config_path: str):
     kind = cfg.get("kind", "unconfigured")
     if kind == "smoke":
         return SmokeBackend()
+    if kind == "transformers":
+        return TransformersBackend(
+            model=cfg["model"],
+            revision=cfg.get("revision"),
+            device_map=cfg.get("device_map", "auto"),
+            enable_thinking=bool(cfg.get("enable_thinking", False)),
+        )
     if kind == "unconfigured":
         return UnconfiguredBackend()
     raise RuntimeError(
