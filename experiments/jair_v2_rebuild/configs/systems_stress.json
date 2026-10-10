@@ -1,0 +1,9 @@
+{
+  "systems": [
+    {"name": "standard_rag", "adapter": "external", "enabled": true},
+    {"name": "strong_rag", "adapter": "external", "enabled": true},
+    {"name": "react_agent", "adapter": "external", "enabled": true},
+    {"name": "otillm_balanced", "adapter": "otillm", "mode": "balanced", "enabled": true}
+  ],
+  "note": "Retrieval-stress analysis is restricted to systems that actually consume retrieved evidence. Non-retrieval baselines are evaluated in the clean benchmark and XSTest policy study, not interpreted under retrieval perturbations."
+}
