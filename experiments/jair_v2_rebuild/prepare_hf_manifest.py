@@ -222,45 +222,64 @@ def parse_fever_lines(lines: str) -> Dict[int, str]:
 
 
 def fever(n: int, seed: int) -> List[Dict]:
-    claims = load_dataset("EleutherAI/fever", "v1.0", split="dev", trust_remote_code=True)
-    # FEVER has repeated rows per evidence annotation. Group by claim id.
+    """Build a deterministic FEVER sample with resolvable gold evidence.
+
+    We oversample candidate claims before resolving Wikipedia pages. This avoids
+    failing the entire frozen build when a small number of legacy FEVER evidence
+    page identifiers cannot be resolved from the mirrored wiki-pages corpus.
+    """
+    claims = load_dataset(
+        "EleutherAI/fever", "v1.0", split="dev", trust_remote_code=True
+    )
+
     grouped = {}
     for r in claims:
         cid = str(r["id"])
-        g = grouped.setdefault(cid, {
-            "id": cid, "claim": r["claim"], "label": r["label"], "evidence": []
-        })
+        g = grouped.setdefault(
+            cid,
+            {"id": cid, "claim": r["claim"], "label": r["label"], "evidence": []},
+        )
         page = str(r.get("evidence_wiki_url") or "")
         sent = int(r.get("evidence_sentence_id", -1))
         if page and sent >= 0:
             g["evidence"].append((page, sent))
 
-    # Preserve evaluable gold-evidence claims; NEI remains valuable for label
-    # accuracy but cannot support a gold-evidence faithfulness calculation.
+    # Deterministically oversample so unresolved legacy page ids can be skipped
+    # without changing the sampling rule after observing model outputs.
     rows = list(grouped.values())
-    selected = take_hash_sample(rows, n, "fever", seed, lambda r: r["id"])
+    pool_n = min(len(rows), max(n + 50, int(n * 1.5)))
+    selected_pool = take_hash_sample(
+        rows, pool_n, "fever", seed, lambda r: r["id"]
+    )
 
-    wanted_pages = set(page for r in selected for page, _ in r["evidence"])
+    wanted_pages = set(
+        page for r in selected_pool for page, _ in r["evidence"]
+    )
     page_lines: Dict[str, Dict[int, str]] = {}
+    unresolved_pages = set(wanted_pages)
+
     if wanted_pages:
         wiki = load_dataset(
-            "EleutherAI/fever", "wiki_pages",
-            split="wikipedia_pages", streaming=True, trust_remote_code=True
+            "EleutherAI/fever",
+            "wiki_pages",
+            split="wikipedia_pages",
+            streaming=True,
+            trust_remote_code=True,
         )
-        remaining = set(wanted_pages)
         for page in wiki:
             pid = str(page["id"])
-            if pid in remaining:
+            if pid in unresolved_pages:
                 page_lines[pid] = parse_fever_lines(page.get("lines", ""))
-                remaining.remove(pid)
-                if not remaining:
+                unresolved_pages.remove(pid)
+                if not unresolved_pages:
                     break
-        if remaining:
-            raise RuntimeError(f"Could not resolve {len(remaining)} FEVER evidence pages.")
 
     out = []
-    for r in selected:
+    skipped_unresolved = []
+    for r in selected_pool:
         evidence, gold_ids, seen = [], [], set()
+        unresolved_claim_evidence = False
+
         for page, sent in r["evidence"]:
             key = (page, sent)
             if key in seen:
@@ -268,6 +287,7 @@ def fever(n: int, seed: int) -> List[Dict]:
             seen.add(key)
             text = page_lines.get(page, {}).get(sent, "")
             if not text:
+                unresolved_claim_evidence = True
                 continue
             eid = f"{page}::{sent}"
             evidence.append({
@@ -278,21 +298,47 @@ def fever(n: int, seed: int) -> List[Dict]:
                 "metadata": {"sentence_id": sent},
             })
             gold_ids.append(eid)
+
+        label = r["label"]
+        # SUPPORTS/REFUTES claims need at least one resolved gold evidence
+        # sentence for the evidence-grounded evaluation. NEI claims legitimately
+        # have no gold supporting evidence.
+        if label != "NOT ENOUGH INFO" and not gold_ids:
+            skipped_unresolved.append(r["id"])
+            continue
+
         out.append({
             "id": f"fever_{r['id']}",
             "dataset": "fever",
-            "query": f"Verify the claim and answer SUPPORTS, REFUTES, or NOT ENOUGH INFO: {r['claim']}",
-            "references": [r["label"]],
+            "query": (
+                "Verify the claim and answer SUPPORTS, REFUTES, or NOT ENOUGH INFO: "
+                + r["claim"]
+            ),
+            "references": [label],
             "evidence_clean": evidence,
             "gold_evidence_ids": gold_ids,
             "policy_label": "answer",
             "metadata": {
-                "fever_label": r["label"],
+                "fever_label": label,
                 "benchmark_native_evidence": bool(gold_ids),
+                "evidence_resolution_complete": not unresolved_claim_evidence,
             },
         })
-    return out
+        if len(out) == n:
+            break
 
+    if len(out) < n:
+        raise RuntimeError(
+            f"FEVER produced only {len(out)} eligible records after evidence "
+            f"resolution; requested {n}. Increase the deterministic candidate pool."
+        )
+
+    if skipped_unresolved:
+        print(
+            f"fever_skipped_unresolved_claims={len(skipped_unresolved)} "
+            f"unresolved_pages={len(unresolved_pages)}"
+        )
+    return out
 
 def write_jsonl(rows: Sequence[Dict], path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
