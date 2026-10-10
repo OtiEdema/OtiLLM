@@ -22,12 +22,13 @@ def main():
     p.add_argument("--raw", type=Path, required=True)
     p.add_argument("--manifest", type=Path, required=True)
     p.add_argument("--nli-model", required=True)
+    p.add_argument("--nli-revision", default=None)
     p.add_argument("--threshold", type=float, default=0.5)
     p.add_argument("--out", type=Path, required=True)
     args = p.parse_args()
 
     manifest = load_manifest(args.manifest)
-    evaluator = NLIEvaluator(args.nli_model)
+    evaluator = NLIEvaluator(args.nli_model, revision=args.nli_revision)
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
     n = 0
@@ -53,8 +54,9 @@ def main():
             )
             row.update(faith)
             row["factuality"] = factuality
-            row["factuality_evaluator"] = args.nli_model
-            row["faithfulness_evaluator"] = args.nli_model
+            evaluator_id = args.nli_model + ("@" + args.nli_revision if args.nli_revision else "")
+            row["factuality_evaluator"] = evaluator_id
+            row["faithfulness_evaluator"] = evaluator_id
             row["entailment_threshold"] = args.threshold
             fout.write(json.dumps(row, ensure_ascii=False, default=str) + "\n")
             n += 1
