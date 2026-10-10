@@ -1,4 +1,7 @@
-"""Paired bootstrap confidence intervals computed from raw per-example results."""
+"""Paired statistical validation from raw per-example results.
+
+No values are hard-coded. The benchmark item is the paired unit.
+"""
 
 import argparse
 import csv
@@ -21,12 +24,27 @@ def paired_bootstrap(a, b, n_boot=5000, seed=42):
         raise ValueError("Paired samples must be non-empty and equal length")
     rng = random.Random(seed)
     n = len(a)
-    observed = sum(x - y for x, y in zip(a, b)) / n
+    diffs = [x - y for x, y in zip(a, b)]
+    observed = sum(diffs) / n
     sims = []
     for _ in range(n_boot):
         idxs = [rng.randrange(n) for _ in range(n)]
-        sims.append(sum(a[i] - b[i] for i in idxs) / n)
+        sims.append(sum(diffs[i] for i in idxs) / n)
     return observed, percentile(sims, 0.025), percentile(sims, 0.975)
+
+
+def paired_permutation_pvalue(a, b, n_perm=10000, seed=42):
+    if len(a) != len(b) or not a:
+        raise ValueError("Paired samples must be non-empty and equal length")
+    rng = random.Random(seed)
+    diffs = [x - y for x, y in zip(a, b)]
+    obs = abs(sum(diffs) / len(diffs))
+    ge = 0
+    for _ in range(n_perm):
+        sim = sum((d if rng.random() < 0.5 else -d) for d in diffs) / len(diffs)
+        if abs(sim) >= obs:
+            ge += 1
+    return (ge + 1) / (n_perm + 1)
 
 
 def main():
@@ -34,6 +52,10 @@ def main():
     p.add_argument("--input", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--metric", default="token_f1")
+    p.add_argument("--condition", default="clean")
+    p.add_argument("--bootstrap", type=int, default=5000)
+    p.add_argument("--permutations", type=int, default=10000)
+    p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
 
     by_system = defaultdict(dict)
@@ -42,7 +64,7 @@ def main():
             if not line.strip():
                 continue
             r = json.loads(line)
-            if r.get("condition", "clean") != "clean":
+            if r.get("condition", "clean") != args.condition:
                 continue
             value = r.get(args.metric)
             if isinstance(value, (int, float)):
@@ -51,34 +73,38 @@ def main():
     systems = sorted(by_system)
     rows = []
     for i, a in enumerate(systems):
-        for b in systems[i+1:]:
+        for b in systems[i + 1:]:
             ids = sorted(set(by_system[a]) & set(by_system[b]))
             if not ids:
                 continue
             av = [by_system[a][x] for x in ids]
             bv = [by_system[b][x] for x in ids]
-            diff, lo, hi = paired_bootstrap(av, bv)
+            diff, lo, hi = paired_bootstrap(av, bv, args.bootstrap, args.seed)
+            pvalue = paired_permutation_pvalue(av, bv, args.permutations, args.seed)
             rows.append({
                 "system_a": a,
                 "system_b": b,
+                "condition": args.condition,
                 "metric": args.metric,
                 "n_paired": len(ids),
                 "mean_difference_a_minus_b": diff,
                 "bootstrap_ci_2.5": lo,
                 "bootstrap_ci_97.5": hi,
+                "paired_permutation_p": pvalue,
             })
 
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fields = list(rows[0].keys()) if rows else [
-        "system_a","system_b","metric","n_paired",
-        "mean_difference_a_minus_b","bootstrap_ci_2.5","bootstrap_ci_97.5"
+    fields = [
+        "system_a","system_b","condition","metric","n_paired",
+        "mean_difference_a_minus_b","bootstrap_ci_2.5",
+        "bootstrap_ci_97.5","paired_permutation_p"
     ]
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)
-    print(f"Saved {path}")
+    print(f"Saved {len(rows)} pairwise comparisons to {path}")
 
 
 if __name__ == "__main__":
