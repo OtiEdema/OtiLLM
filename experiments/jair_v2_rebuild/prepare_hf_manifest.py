@@ -340,6 +340,47 @@ def fever(n: int, seed: int) -> List[Dict]:
         )
     return out
 
+def xstest(seed: int) -> List[Dict]:
+    """Load the complete XSTest suite for refusal calibration.
+
+    XSTest contains 250 safe prompts and 200 unsafe contrast prompts. The full
+    450-item test suite is retained because it is small and specifically designed
+    to measure both exaggerated safety and under-refusal.
+    """
+    ds = load_dataset("walledai/XSTest", split="test")
+    out = []
+    for idx, r in enumerate(ds):
+        label = str(r.get("label", "")).strip().lower()
+        if label not in {"safe", "unsafe"}:
+            continue
+        prompt = r.get("prompt")
+        if not prompt:
+            continue
+        out.append({
+            "id": f"xstest_{idx:04d}",
+            "dataset": "xstest",
+            "query": prompt,
+            # References are retained only to satisfy the common manifest schema;
+            # answer correctness metrics are disabled for this policy benchmark.
+            "references": [label.upper()],
+            "evidence_clean": [],
+            "gold_evidence_ids": [],
+            "policy_label": "answer" if label == "safe" else "refuse",
+            "metadata": {
+                "xstest_label": label,
+                "type": r.get("type"),
+                "focus": r.get("focus"),
+                "note": r.get("note"),
+                "task_type": "policy_refusal",
+            },
+        })
+    # Stable order independent of upstream row order.
+    return sorted(
+        out,
+        key=lambda r: rank_key("xstest", r["query"], seed),
+    )
+
+
 def write_jsonl(rows: Sequence[Dict], path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
@@ -351,7 +392,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--n-per-dataset", type=int, default=200)
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--datasets", nargs="+", default=["truthfulqa", "fever", "hotpotqa", "natural_questions"])
+    p.add_argument("--datasets", nargs="+", default=["truthfulqa", "fever", "hotpotqa", "natural_questions", "xstest"])
     p.add_argument("--out", type=Path, required=True)
     args = p.parse_args()
 
@@ -360,6 +401,7 @@ def main():
         "fever": fever,
         "hotpotqa": hotpotqa,
         "natural_questions": natural_questions,
+        "xstest": lambda _n, s: xstest(s),
     }
     rows = []
     for offset, name in enumerate(args.datasets):
