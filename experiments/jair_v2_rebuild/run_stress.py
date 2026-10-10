@@ -1,4 +1,4 @@
-"""Run deterministic retrieval-stress experiments."""
+"""Run checkpointed deterministic retrieval-stress experiments."""
 
 import argparse
 import json
@@ -37,11 +37,28 @@ def load_systems(path, backend):
         if not s.get("enabled", False):
             continue
         if s["adapter"] == "otillm":
-            systems.append(OtiLLMAdapter(s["name"], s.get("mode", "balanced"), backend))
+            systems.append(
+                OtiLLMAdapter(s["name"], s.get("mode", "balanced"), backend)
+            )
         else:
             cls = BASELINES[s["name"]]
-            systems.append(ExternalAdapter(s["name"], cls(s["name"], backend)))
+            systems.append(
+                ExternalAdapter(s["name"], cls(s["name"], backend))
+            )
     return systems
+
+
+def completed_keys(path: Path):
+    done = set()
+    if not path.exists():
+        return done
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            done.add((r["id"], r["system"], r["condition"]))
+    return done
 
 
 def main():
@@ -50,42 +67,67 @@ def main():
     p.add_argument("--systems", required=True)
     p.add_argument("--backend", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--resume", action="store_true")
     args = p.parse_args()
 
     backend = load_backend(args.backend)
     systems = load_systems(args.systems, backend)
-    rows = []
-    for record in load_jsonl(args.manifest):
-        if record.get("metadata", {}).get("task_type") == "policy_refusal":
-            continue
-        for condition in CONDITIONS:
-            evidence, perturbation_log = transform(record, condition)
-            for adapter in systems:
-                out = adapter.run(record, evidence)
-                policy_task = record.get("metadata", {}).get("task_type") == "policy_refusal"
-                metrics = {
-                    "exact_match": None if policy_task else exact_match(out["answer"], record.get("references", [])),
-                    "token_f1": None if policy_task else token_f1(out["answer"], record.get("references", [])),
-                    "faithfulness": faithfulness_placeholder(),
-                }
-                metrics.update(refusal_metrics(out["action"], record.get("policy_label", "answer")))
-                rows.append({
-                    "id": record["id"],
-                    "dataset": record["dataset"],
-                    "condition": condition,
-                    "backend": backend.name,
-                    "perturbation_log": perturbation_log,
-                    "evaluation_evidence": evidence,
-                    **out,
-                    **metrics,
-                })
+    records = load_jsonl(args.manifest)
 
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        for row in rows:
-            f.write(json.dumps(row, default=str) + "\n")
-    print(f"Saved {len(rows)} stress observations to {path}")
+    done = completed_keys(path) if args.resume else set()
+    mode = "a" if args.resume and path.exists() else "w"
+
+    written = 0
+    skipped = 0
+    with path.open(mode, encoding="utf-8") as f:
+        for record in records:
+            if record.get("metadata", {}).get("task_type") == "policy_refusal":
+                continue
+
+            for condition in CONDITIONS:
+                evidence, perturbation_log = transform(record, condition)
+                for adapter in systems:
+                    key = (record["id"], adapter.name, condition)
+                    if key in done:
+                        skipped += 1
+                        continue
+
+                    out = adapter.run(record, evidence)
+                    metrics = {
+                        "exact_match": exact_match(
+                            out["answer"], record.get("references", [])
+                        ),
+                        "token_f1": token_f1(
+                            out["answer"], record.get("references", [])
+                        ),
+                        "faithfulness": faithfulness_placeholder(),
+                    }
+                    metrics.update(
+                        refusal_metrics(
+                            out["action"], record.get("policy_label", "answer")
+                        )
+                    )
+                    row = {
+                        "id": record["id"],
+                        "dataset": record["dataset"],
+                        "condition": condition,
+                        "backend": backend.name,
+                        "task_type": "content",
+                        "perturbation_log": perturbation_log,
+                        "evaluation_evidence": evidence,
+                        **out,
+                        **metrics,
+                    }
+                    f.write(json.dumps(row, default=str) + "\n")
+                    f.flush()
+                    written += 1
+
+    print(
+        f"completed_new={written} skipped_existing={skipped} "
+        f"output={path}"
+    )
 
 
 if __name__ == "__main__":
