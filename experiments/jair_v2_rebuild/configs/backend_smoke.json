@@ -1,0 +1,9 @@
+{
+  "kind": "smoke",
+  "provider": "deterministic-local",
+  "model": "smoke-test-backend",
+  "model_version_or_snapshot": "1",
+  "temperature": 0.0,
+  "max_tokens": 64,
+  "notes": "Pipeline testing only. Results from this backend are not eligible for publication."
+}
