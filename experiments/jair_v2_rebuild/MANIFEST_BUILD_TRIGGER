@@ -1,0 +1,1 @@
+Build the frozen JAIR v2.0 benchmark manifest with n_per_dataset=200 and seed=42.
