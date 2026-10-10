@@ -1,0 +1,77 @@
+name: JAIR Publication Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_artifact_run_id:
+        description: "Run ID of successful Build JAIR Benchmark Manifest workflow"
+        required: true
+      phase:
+        description: "clean | stress"
+        required: true
+        default: "clean"
+
+jobs:
+  evaluate:
+    # Requires a self-hosted GPU runner. GitHub-hosted ubuntu runners are not
+    # appropriate for the pinned Qwen3-8B publication backend.
+    runs-on: [self-hosted, linux, x64, gpu]
+    timeout-minutes: 1440
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package and evaluation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+          python -m pip install -r experiments/jair_v2_rebuild/requirements-eval.txt
+
+      - name: Download frozen manifest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: jair-v2.0-frozen-manifest
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.manifest_artifact_run_id }}
+          path: experiments/jair_v2_rebuild/data
+
+      - name: Verify frozen manifest
+        working-directory: experiments/jair_v2_rebuild
+        run: |
+          python validate_manifest.py data/jair_manifest.jsonl \
+            --expected-content-n 200 \
+            --require-full-xstest
+
+      - name: Run clean evaluation
+        if: ${{ inputs.phase == 'clean' }}
+        working-directory: experiments/jair_v2_rebuild
+        run: |
+          python run_experiments.py \
+            --manifest data/jair_manifest.jsonl \
+            --systems configs/systems_publication.json \
+            --backend configs/backend.json \
+            --out results/raw_clean.jsonl \
+            --resume
+
+      - name: Run retrieval-stress evaluation
+        if: ${{ inputs.phase == 'stress' }}
+        working-directory: experiments/jair_v2_rebuild
+        run: |
+          python run_stress.py \
+            --manifest data/jair_manifest.jsonl \
+            --systems configs/systems_stress.json \
+            --backend configs/backend.json \
+            --out results/raw_stress.jsonl \
+            --resume
+
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jair-v2.0-${{ inputs.phase }}-raw-results
+          path: experiments/jair_v2_rebuild/results/*.jsonl
+          if-no-files-found: warn
+          retention-days: 90
