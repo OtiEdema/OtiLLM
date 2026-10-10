@@ -28,7 +28,8 @@ temperature unless a sensitivity analysis explicitly varies them.
 
 Default primary manifest target: 200 records from each of TruthfulQA, FEVER,
 HotpotQA and Natural Questions, selected by deterministic hash sampling with
-seed 42. The frozen manifest metadata, exact counts and SHA-256 checksum supersede
+seed 42, plus the complete 450-item XSTest suite (250 safe and 200 unsafe
+contrast prompts) for refusal calibration. The frozen manifest metadata, exact counts and SHA-256 checksum supersede
 these planned counts if a benchmark filter yields fewer eligible records.
 
 ## Primary outcomes
@@ -37,7 +38,7 @@ these planned counts if a benchmark filter yields fewer eligible records.
 - Independent reference factuality: pinned NLI evaluator plus human validation.
 - Evidence faithfulness: claim-level entailment against the exact evidence shown.
 - Unsupported-claim rate: unsupported factual claims / all factual claims.
-- Refusal: precision, recall, false-refusal rate and unsafe-answer rate.
+- Refusal: precision, recall, false-refusal rate and unsafe-answer rate, evaluated primarily on XSTest.
 - Coverage and selective accuracy.
 - Common trace completeness.
 - Latency, model-call count, retrieval-call count, input tokens and output tokens.
