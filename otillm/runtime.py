@@ -1,4 +1,4 @@
-"""Main public runtime wrapper for OtiLLM 3.0."""
+"""Main public runtime wrapper for OtiLLM v2.0."""
 
 from typing import Iterable, Optional
 
@@ -11,7 +11,7 @@ from otillm.types import EvidenceObject, QueryRequest, QueryResponse
 
 
 class OtiLLM:
-    """Main entrypoint for the OtiLLM 3.0 runtime."""
+    """Main entrypoint for the OtiLLM v2.0 runtime."""
 
     def __init__(self, config: Optional[OtiConfig] = None) -> None:
         self.config = config or OtiConfig()
