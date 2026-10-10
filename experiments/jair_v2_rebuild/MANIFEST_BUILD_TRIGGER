@@ -1,3 +1,4 @@
 Build the frozen JAIR v2.0 benchmark manifest with n_per_dataset=200 and seed=42.
 Retry 2: FEVER-compatible datasets loader pinned.
 Retry 3: FEVER loader trust_remote_code enabled after source inspection.
+Retry 4: unresolved FEVER legacy evidence pages are skipped within deterministic oversampling.
