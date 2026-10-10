@@ -1,4 +1,8 @@
-"""Run clean JAIR experiments and save one raw row per example/system."""
+"""Run clean JAIR experiments and persist one raw row per example/system.
+
+The runner supports checkpointed resume so an interrupted GPU run does not
+silently restart or duplicate completed observations.
+"""
 
 import argparse
 import json
@@ -36,11 +40,28 @@ def load_systems(path, backend):
         if not cfg.get("enabled", False):
             continue
         if cfg["adapter"] == "otillm":
-            adapters.append(OtiLLMAdapter(cfg["name"], cfg.get("mode", "balanced"), backend))
+            adapters.append(
+                OtiLLMAdapter(cfg["name"], cfg.get("mode", "balanced"), backend)
+            )
         else:
             cls = BASELINES[cfg["name"]]
-            adapters.append(ExternalAdapter(cfg["name"], cls(cfg["name"], backend)))
+            adapters.append(
+                ExternalAdapter(cfg["name"], cls(cfg["name"], backend))
+            )
     return adapters
+
+
+def completed_keys(path: Path):
+    done = set()
+    if not path.exists():
+        return done
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            done.add((r["id"], r["system"], r.get("condition", "clean")))
+    return done
 
 
 def main():
@@ -49,37 +70,65 @@ def main():
     p.add_argument("--systems", required=True)
     p.add_argument("--backend", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--resume", action="store_true")
     args = p.parse_args()
 
     backend = load_backend(args.backend)
     systems = load_systems(args.systems, backend)
-    rows = []
-    for record in load_jsonl(args.manifest):
-        for adapter in systems:
-            out = adapter.run(record, record.get("evidence_clean", []))
-            policy_task = record.get("metadata", {}).get("task_type") == "policy_refusal"
-            metrics = {
-                "exact_match": None if policy_task else exact_match(out["answer"], record.get("references", [])),
-                "token_f1": None if policy_task else token_f1(out["answer"], record.get("references", [])),
-                "faithfulness": faithfulness_placeholder(),
-            }
-            metrics.update(refusal_metrics(out["action"], record.get("policy_label", "answer")))
-            rows.append({
-                "id": record["id"],
-                "dataset": record["dataset"],
-                "condition": "clean",
-                "references": record.get("references", []),
-                "backend": backend.name,
-                **out,
-                **metrics,
-            })
+    records = load_jsonl(args.manifest)
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w", encoding="utf-8") as f:
-        for row in rows:
-            f.write(json.dumps(row, default=str) + "\n")
-    print(f"Saved {len(rows)} raw observations to {out_path}")
+    done = completed_keys(out_path) if args.resume else set()
+    mode = "a" if args.resume and out_path.exists() else "w"
+
+    written = 0
+    skipped = 0
+    with out_path.open(mode, encoding="utf-8") as f:
+        for record in records:
+            for adapter in systems:
+                key = (record["id"], adapter.name, "clean")
+                if key in done:
+                    skipped += 1
+                    continue
+
+                out = adapter.run(record, record.get("evidence_clean", []))
+                policy_task = (
+                    record.get("metadata", {}).get("task_type") == "policy_refusal"
+                )
+                metrics = {
+                    "exact_match": None if policy_task else exact_match(
+                        out["answer"], record.get("references", [])
+                    ),
+                    "token_f1": None if policy_task else token_f1(
+                        out["answer"], record.get("references", [])
+                    ),
+                    "faithfulness": faithfulness_placeholder(),
+                }
+                metrics.update(
+                    refusal_metrics(
+                        out["action"], record.get("policy_label", "answer")
+                    )
+                )
+                row = {
+                    "id": record["id"],
+                    "dataset": record["dataset"],
+                    "condition": "clean",
+                    "backend": backend.name,
+                    "task_type": record.get("metadata", {}).get(
+                        "task_type", "content"
+                    ),
+                    **out,
+                    **metrics,
+                }
+                f.write(json.dumps(row, default=str) + "\n")
+                f.flush()
+                written += 1
+
+    print(
+        f"completed_new={written} skipped_existing={skipped} "
+        f"output={out_path}"
+    )
 
 
 if __name__ == "__main__":
