@@ -41,7 +41,7 @@ class TransformersBackend:
         self.model = AutoModelForCausalLM.from_pretrained(
             model,
             revision=revision,
-            torch_dtype="auto",
+            dtype="auto",
             device_map=device_map,
         )
 
@@ -69,6 +69,10 @@ class TransformersBackend:
         if do_sample:
             kwargs["temperature"] = temperature
             kwargs["top_p"] = 0.8
+        else:
+            kwargs["temperature"] = None
+            kwargs["top_p"] = None
+            kwargs["top_k"] = None
 
         start = perf_counter()
         with self.torch.inference_mode():
