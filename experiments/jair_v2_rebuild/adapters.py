@@ -40,6 +40,7 @@ class OtiLLMAdapter:
         elapsed = perf_counter() - start
 
         trace = asdict(response.trace)
+        generation = getattr(runtime.generator, "last_generation_result", None)
         common_trace = {
             "query_received": True,
             "retrieval_attempted": True,
@@ -59,12 +60,15 @@ class OtiLLMAdapter:
             "retrieved_sources": response.trace.retrieved_sources,
             "evidence_sufficiency": response.trace.evidence_sufficiency,
             "confidence": response.trace.confidence,
-            "latency_seconds": elapsed,
-            "llm_calls": 1 if response.trace.action_taken == "EXECUTE" else 0,
+            "latency_seconds": (
+                getattr(generation, "latency_seconds", None)
+                if generation is not None else elapsed
+            ),
+            "llm_calls": 1 if generation is not None else 0,
             "retrieval_calls": 1,
-            "input_tokens": None,
-            "output_tokens": None,
-            "api_cost": None,
+            "input_tokens": getattr(generation, "input_tokens", None) if generation is not None else None,
+            "output_tokens": getattr(generation, "output_tokens", None) if generation is not None else None,
+            "api_cost": getattr(generation, "api_cost", None) if generation is not None else None,
         }
 
 
