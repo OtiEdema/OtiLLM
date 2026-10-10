@@ -42,7 +42,7 @@ jobs:
           python prepare_hf_manifest.py \
             --n-per-dataset "$N_PER_DATASET" \
             --seed "$SAMPLE_SEED" \
-            --datasets truthfulqa fever hotpotqa natural_questions \
+            --datasets truthfulqa fever hotpotqa natural_questions xstest \
             --out data/jair_manifest.jsonl
 
       - name: Validate manifest
