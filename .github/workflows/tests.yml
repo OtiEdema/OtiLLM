@@ -14,4 +14,17 @@ jobs:
           python-version: "3.11"
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e .[dev]
-      - run: python -m pytest
+      - name: Compile publication rebuild
+        run: python -m compileall -q otillm experiments/jair_v2_rebuild
+      - name: Unit tests
+        run: python -m pytest
+      - name: JAIR clean smoke test
+        working-directory: experiments/jair_v2_rebuild
+        run: |
+          python run_experiments.py             --manifest data/smoke_manifest.jsonl             --systems configs/systems.json             --backend configs/backend_smoke.json             --out results/smoke_raw.jsonl
+          test -s results/smoke_raw.jsonl
+      - name: JAIR stress smoke test
+        working-directory: experiments/jair_v2_rebuild
+        run: |
+          python run_stress.py             --manifest data/smoke_manifest.jsonl             --systems configs/systems.json             --backend configs/backend_smoke.json             --out results/smoke_stress_raw.jsonl
+          test -s results/smoke_stress_raw.jsonl
