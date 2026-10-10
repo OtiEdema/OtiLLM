@@ -3,3 +3,4 @@ Retry 2: FEVER-compatible datasets loader pinned.
 Retry 3: FEVER loader trust_remote_code enabled after source inspection.
 Retry 4: unresolved FEVER legacy evidence pages are skipped within deterministic oversampling.
 Retry 5: XSTest added; FEVER oversampling enabled; policy benchmark excluded from retrieval stress.
+Retry 6: Natural Questions evidence bounded to annotated long-answer context.
