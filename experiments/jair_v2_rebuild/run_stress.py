@@ -56,6 +56,8 @@ def main():
     systems = load_systems(args.systems, backend)
     rows = []
     for record in load_jsonl(args.manifest):
+        if record.get("metadata", {}).get("task_type") == "policy_refusal":
+            continue
         for condition in CONDITIONS:
             evidence, perturbation_log = transform(record, condition)
             for adapter in systems:
