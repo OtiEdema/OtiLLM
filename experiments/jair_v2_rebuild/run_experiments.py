@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from time import perf_counter
 
 from adapters import ExternalAdapter, OtiLLMAdapter
 from backends import load_backend
@@ -104,6 +105,7 @@ def main():
 
     written = 0
     skipped = 0
+    run_start = perf_counter()
     with out_path.open(mode, encoding="utf-8") as f:
         for record in records:
             for adapter in systems:
@@ -145,8 +147,11 @@ def main():
                 f.flush()
                 written += 1
 
+    elapsed = perf_counter() - run_start
+    rate = (written / elapsed * 60.0) if elapsed > 0 else 0.0
     print(
         f"completed_new={written} skipped_existing={skipped} "
+        f"elapsed_seconds={elapsed:.2f} observations_per_minute={rate:.3f} "
         f"output={out_path}"
     )
 
