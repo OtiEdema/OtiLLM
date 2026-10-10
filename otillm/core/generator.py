@@ -16,6 +16,7 @@ class GeneratorEngine:
 
     def __init__(self, backend: Optional[Any] = None) -> None:
         self.backend = backend
+        self.last_generation_result = None
 
     @staticmethod
     def _prompt(query: str, evidence: List[RetrievedEvidence]) -> str:
@@ -36,6 +37,7 @@ class GeneratorEngine:
 
         if self.backend is not None:
             result = self.backend.generate(self._prompt(query, evidence))
+            self.last_generation_result = result
             if isinstance(result, str):
                 return result
             if hasattr(result, "text"):
