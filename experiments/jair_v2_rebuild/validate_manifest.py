@@ -46,6 +46,11 @@ def validate(path: Path, expected_content_n=None, require_full_xstest=False):
                 errors.append(f"line {lineno}: empty query")
             if not isinstance(r["references"], list) or not r["references"]:
                 errors.append(f"line {lineno}: references must be a non-empty list")
+            elif not all(isinstance(x, str) for x in r["references"]):
+                errors.append(
+                    f"line {lineno}: all references must be strings; "
+                    f"got {[type(x).__name__ for x in r['references']]}"
+                )
             if r["policy_label"] not in POLICY:
                 errors.append(
                     f"line {lineno}: invalid policy_label {r['policy_label']!r}"
@@ -68,7 +73,15 @@ def validate(path: Path, expected_content_n=None, require_full_xstest=False):
                 errors.append(f"line {lineno}: Natural Questions item lacks bounded evidence")
             if ds == "fever":
                 label = r.get("metadata", {}).get("fever_label")
-                if label in {"SUPPORTS","REFUTES"} and not r["gold_evidence_ids"]:
+                if label not in {"SUPPORTS", "REFUTES"}:
+                    errors.append(
+                        f"line {lineno}: FEVER label must be SUPPORTS/REFUTES; got {label!r}"
+                    )
+                if r["references"] != [label]:
+                    errors.append(
+                        f"line {lineno}: FEVER reference does not match label {label!r}"
+                    )
+                if not r["gold_evidence_ids"]:
                     errors.append(
                         f"line {lineno}: FEVER {label} item lacks resolved evidence"
                     )
