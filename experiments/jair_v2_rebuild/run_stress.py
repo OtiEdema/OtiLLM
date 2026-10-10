@@ -5,10 +5,24 @@ import json
 from pathlib import Path
 
 from adapters import ExternalAdapter, OtiLLMAdapter
+from backends import load_backend
+from baseline_adapters import (
+    DirectLLMAdapter, PromptChainAdapter, StandardRAGAdapter, StrongRAGAdapter,
+    SelfCheckingAdapter, GuardrailAdapter, ReActAdapter,
+)
 from metrics import exact_match, faithfulness_placeholder, refusal_metrics, token_f1
 from perturbations import transform
 
 CONDITIONS = ["clean", "noisy", "contradictory", "incomplete", "adversarial", "stale"]
+BASELINES = {
+    "direct_llm": DirectLLMAdapter,
+    "prompt_chain": PromptChainAdapter,
+    "standard_rag": StandardRAGAdapter,
+    "strong_rag": StrongRAGAdapter,
+    "self_checking_llm": SelfCheckingAdapter,
+    "guardrail_llm": GuardrailAdapter,
+    "react_agent": ReActAdapter,
+}
 
 
 def load_jsonl(path):
@@ -16,16 +30,17 @@ def load_jsonl(path):
         return [json.loads(line) for line in f if line.strip()]
 
 
-def load_systems(path):
+def load_systems(path, backend):
     cfg = json.loads(Path(path).read_text(encoding="utf-8"))
     systems = []
     for s in cfg["systems"]:
         if not s.get("enabled", False):
             continue
-        systems.append(
-            OtiLLMAdapter(s["name"], s.get("mode", "balanced"))
-            if s["adapter"] == "otillm" else ExternalAdapter(s["name"])
-        )
+        if s["adapter"] == "otillm":
+            systems.append(OtiLLMAdapter(s["name"], s.get("mode", "balanced"), backend))
+        else:
+            cls = BASELINES[s["name"]]
+            systems.append(ExternalAdapter(s["name"], cls(s["name"], backend)))
     return systems
 
 
@@ -33,11 +48,13 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--manifest", required=True)
     p.add_argument("--systems", required=True)
+    p.add_argument("--backend", required=True)
     p.add_argument("--out", required=True)
     args = p.parse_args()
 
+    backend = load_backend(args.backend)
+    systems = load_systems(args.systems, backend)
     rows = []
-    systems = load_systems(args.systems)
     for record in load_jsonl(args.manifest):
         for condition in CONDITIONS:
             evidence, perturbation_log = transform(record, condition)
@@ -53,6 +70,7 @@ def main():
                     "id": record["id"],
                     "dataset": record["dataset"],
                     "condition": condition,
+                    "backend": backend.name,
                     "perturbation_log": perturbation_log,
                     **out,
                     **metrics,
