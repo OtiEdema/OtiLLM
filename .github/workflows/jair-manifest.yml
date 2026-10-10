@@ -11,11 +11,19 @@ on:
         description: "Deterministic sampling seed"
         required: true
         default: "42"
+  push:
+    branches:
+      - jair-v2.0-rebuild
+    paths:
+      - "experiments/jair_v2_rebuild/MANIFEST_BUILD_TRIGGER"
 
 jobs:
   build-manifest:
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    env:
+      N_PER_DATASET: ${{ inputs.n_per_dataset || '200' }}
+      SAMPLE_SEED: ${{ inputs.seed || '42' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,8 +40,8 @@ jobs:
         working-directory: experiments/jair_v2_rebuild
         run: |
           python prepare_hf_manifest.py \
-            --n-per-dataset "${{ inputs.n_per_dataset }}" \
-            --seed "${{ inputs.seed }}" \
+            --n-per-dataset "$N_PER_DATASET" \
+            --seed "$SAMPLE_SEED" \
             --datasets truthfulqa fever hotpotqa natural_questions \
             --out data/jair_manifest.jsonl
 
@@ -46,7 +54,7 @@ jobs:
         working-directory: experiments/jair_v2_rebuild
         run: |
           python freeze_manifest.py data/jair_manifest.jsonl \
-            --seed "${{ inputs.seed }}" \
+            --seed "$SAMPLE_SEED" \
             --metadata-out data/jair_manifest.metadata.json
 
       - name: Upload frozen manifest artifact
