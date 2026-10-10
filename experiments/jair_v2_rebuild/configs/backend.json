@@ -1,0 +1,9 @@
+{
+  "kind": "unconfigured",
+  "provider": null,
+  "model": null,
+  "model_version_or_snapshot": null,
+  "temperature": 0.2,
+  "max_tokens": 512,
+  "notes": "Fill with the exact common publication backend before enabling model-based baselines. Do not infer the backend from the old manuscript."
+}
