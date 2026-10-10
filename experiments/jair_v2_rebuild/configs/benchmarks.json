@@ -28,7 +28,14 @@
       "licence": "CC BY-SA 3.0",
       "planned_n": 200,
       "task": "real-user QA over Wikipedia"
+    },
+    "xstest": {
+      "source": "https://huggingface.co/datasets/walledai/XSTest",
+      "split": "test",
+      "licence": "CC BY 4.0",
+      "planned_n": 450,
+      "task": "refusal calibration and exaggerated-safety evaluation"
     }
   },
-  "note": "Counts are preregistered defaults for the rebuild, not claims about the legacy experiment. Change only before the frozen evaluation manifest is created."
+  "note": "Primary content benchmarks use 200 deterministic items each; XSTest uses the full 450-item suite. Frozen manifest metadata supersedes planned counts."
 }
