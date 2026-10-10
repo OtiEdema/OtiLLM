@@ -18,13 +18,13 @@ class GenerationResult:
 
 class ModelBackend(Protocol):
     name: str
-    def generate(self, prompt: str, *, temperature: float = 0.2, max_tokens: int = 512) -> GenerationResult: ...
+    def generate(self, prompt: str, *, temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> GenerationResult: ...
 
 
 class TransformersBackend:
     """Pinned local Hugging Face backend for publication experiments."""
 
-    def __init__(self, model: str, revision: str | None = None, device_map: str = "auto", enable_thinking: bool = False):
+    def __init__(self, model: str, revision: str | None = None, device_map: str = "auto", enable_thinking: bool = False, temperature: float = 0.0, max_tokens: int = 256):
         try:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -35,6 +35,8 @@ class TransformersBackend:
         self.model_id = model
         self.revision = revision
         self.enable_thinking = enable_thinking
+        self.default_temperature = float(temperature)
+        self.default_max_tokens = int(max_tokens)
         self.tokenizer = AutoTokenizer.from_pretrained(model, revision=revision)
         self.model = AutoModelForCausalLM.from_pretrained(
             model,
@@ -43,8 +45,11 @@ class TransformersBackend:
             device_map=device_map,
         )
 
-    def generate(self, prompt: str, *, temperature: float = 0.2, max_tokens: int = 512) -> GenerationResult:
+    def generate(self, prompt: str, *, temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> GenerationResult:
         from time import perf_counter
+
+        temperature = self.default_temperature if temperature is None else float(temperature)
+        max_tokens = self.default_max_tokens if max_tokens is None else int(max_tokens)
 
         messages = [{"role": "user", "content": prompt}]
         text = self.tokenizer.apply_chat_template(
@@ -85,7 +90,7 @@ class TransformersBackend:
 
 class UnconfiguredBackend:
     name = "unconfigured"
-    def generate(self, prompt: str, *, temperature: float = 0.2, max_tokens: int = 512) -> GenerationResult:
+    def generate(self, prompt: str, *, temperature: Optional[float] = None, max_tokens: Optional[int] = None) -> GenerationResult:
         raise RuntimeError(
             "No publication model backend is configured. Set the exact provider/model, "
             "archive its parameters, and then enable model-based systems."
@@ -117,6 +122,8 @@ def load_backend(config_path: str):
             revision=cfg.get("revision"),
             device_map=cfg.get("device_map", "auto"),
             enable_thinking=bool(cfg.get("enable_thinking", False)),
+            temperature=float(cfg.get("temperature", 0.0)),
+            max_tokens=int(cfg.get("max_tokens", 256)),
         )
     if kind == "unconfigured":
         return UnconfiguredBackend()
