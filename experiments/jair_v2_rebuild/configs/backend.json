@@ -6,7 +6,7 @@
   "licence": "Apache-2.0",
   "device_map": "auto",
   "enable_thinking": false,
-  "temperature": 0.2,
-  "max_tokens": 512,
-  "notes": "Primary reproducible common backend proposed for the JAIR rebuild. All model-based systems must use this same pinned revision unless a separate cross-backend robustness experiment is explicitly reported."
+  "temperature": 0,
+  "max_tokens": 256,
+  "notes": "Primary reproducible common backend for the JAIR rebuild. All model-based systems use this same pinned revision with deterministic greedy decoding (temperature 0.0), non-thinking mode, and a 256-token generation cap. Any stochastic sensitivity experiment is reported separately."
 }
