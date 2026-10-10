@@ -11,6 +11,7 @@ FEVER wiki-pages configuration.
 
 import argparse
 import hashlib
+import heapq
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -30,6 +31,32 @@ def take_hash_sample(rows: Iterable[Dict], n: int, namespace: str, seed: int, id
         ranked.append((rank_key(namespace, rid, seed), row))
     ranked.sort(key=lambda x: x[0])
     return [r for _, r in ranked[:n]]
+
+
+def take_streaming_hash_sample(rows: Iterable[Dict], n: int, namespace: str, seed: int, id_fn, eligible_fn=None) -> List[Dict]:
+    """Keep only the n smallest deterministic hash keys while streaming.
+
+    This avoids retaining full Natural Questions documents for every validation
+    record in memory.
+    """
+    if n <= 0:
+        return []
+    heap = []
+    for row in rows:
+        if eligible_fn is not None and not eligible_fn(row):
+            continue
+        rid = str(id_fn(row))
+        key = rank_key(namespace, rid, seed)
+        # Max-heap via negative integer hash; keep n smallest hashes.
+        score = int(key, 16)
+        item = (-score, rid, row)
+        if len(heap) < n:
+            heapq.heappush(heap, item)
+        elif item[0] > heap[0][0]:
+            heapq.heapreplace(heap, item)
+    selected = [(-neg, rid, row) for neg, rid, row in heap]
+    selected.sort(key=lambda x: x[0])
+    return [row for _, _, row in selected]
 
 
 def truthfulqa(n: int, seed: int) -> List[Dict]:
@@ -136,17 +163,18 @@ def natural_questions(n: int, seed: int) -> List[Dict]:
         split="validation",
         streaming=True,
     )
-    candidates = []
-    for r in ds:
-        refs = nq_short_answers(r)
-        if not refs:
-            continue
-        candidates.append((rank_key("natural_questions", str(r["id"]), seed), r, refs))
-    candidates.sort(key=lambda x: x[0])
-    sample = candidates[:n]
+    sample = take_streaming_hash_sample(
+        ds,
+        n,
+        "natural_questions",
+        seed,
+        lambda r: r["id"],
+        eligible_fn=lambda r: bool(nq_short_answers(r)),
+    )
 
     out = []
-    for _, r, refs in sample:
+    for r in sample:
+        refs = nq_short_answers(r)
         doc = r.get("document", {}) or {}
         tokens = doc.get("tokens", []) or []
         if isinstance(tokens, dict):
@@ -194,7 +222,7 @@ def parse_fever_lines(lines: str) -> Dict[int, str]:
 
 
 def fever(n: int, seed: int) -> List[Dict]:
-    claims = load_dataset("EleutherAI/fever", "v1.0", split="labelled_dev")
+    claims = load_dataset("EleutherAI/fever", "v1.0", split="dev")
     # FEVER has repeated rows per evidence annotation. Group by claim id.
     grouped = {}
     for r in claims:
