@@ -42,3 +42,21 @@ python statistical_validation.py --input results/raw.jsonl --out results/statist
 ## Current implementation boundary
 
 See IMPLEMENTATION_STATUS.md. Minimal and Full OtiLLM variants are disabled until their controller behaviour is experimentally distinct from Balanced.
+
+## Independent scoring
+
+After generation, attach claim-level factuality and evidence-faithfulness scores with the pinned NLI evaluator:
+
+```bash
+python score_outputs.py \
+  --raw results/raw.jsonl \
+  --manifest data/jair_manifest.jsonl \
+  --nli-model MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli \
+  --nli-revision 6f5cf0a2b59cabb106aca4c287eed12e357e90eb \
+  --threshold 0.5 \
+  --out results/raw_scored.jsonl
+```
+
+For stress outputs, use the corresponding stress JSONL. Each stress row archives the exact transformed evidence exposed to the system so faithfulness is evaluated against the actual condition, not the clean corpus.
+
+Then generate a blinded human-adjudication sheet from a fixed stratified sample. Automated NLI scores are treated as one evaluator, not as ground truth.
