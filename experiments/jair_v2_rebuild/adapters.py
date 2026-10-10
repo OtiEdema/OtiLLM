@@ -12,7 +12,7 @@ class OtiLLMAdapter:
         self.backend = backend
 
     def run(self, record: Dict, evidence: List[Dict]) -> Dict:
-        from otillm.runtime import OtiLLM
+        from otillm import OtiLLM
 
         runtime = OtiLLM(generator_backend=self.backend)
         for item in evidence:
