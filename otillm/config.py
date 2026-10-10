@@ -1,6 +1,6 @@
-"""Configuration models for OtiLLM 3.0.
+"""Configuration models for OtiLLM v2.0.
 
-This file centralises all tunable runtime parameters.
+This module centralises tunable runtime parameters for the publication branch.
 """
 
 from dataclasses import dataclass, field
@@ -30,7 +30,7 @@ class Thresholds:
 
 @dataclass
 class OtiConfig:
-    """Main runtime configuration."""
+    """Main OtiLLM v2.0 runtime configuration."""
 
     top_k: int = 5
     retrieval_weights: RetrievalWeights = field(default_factory=RetrievalWeights)
