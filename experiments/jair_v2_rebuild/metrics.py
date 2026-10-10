@@ -9,8 +9,11 @@ import re
 from typing import Iterable, Optional
 
 
-def _norm(text: str) -> str:
-    text = text.lower().strip()
+def _norm(text) -> str:
+    # Upstream datasets can expose categorical labels as integers. Coercion
+    # prevents a scorer crash, while manifest validation enforces textual refs
+    # for publication runs.
+    text = str(text).lower().strip()
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     return " ".join(text.split())
 
