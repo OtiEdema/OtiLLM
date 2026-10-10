@@ -27,21 +27,28 @@ class BaseAdapter:
         return self.backend.generate(prompt)
 
     @staticmethod
-    def _pack(name, result, trace, *, llm_calls, retrieval_calls):
+    def _sum_optional(results, attr):
+        vals = [getattr(r, attr, None) for r in results if r is not None]
+        vals = [v for v in vals if isinstance(v, (int, float))]
+        return sum(vals) if vals else None
+
+    @classmethod
+    def _pack(cls, name, result, trace, *, results=None, retrieval_calls=0, action="EXECUTE"):
+        results = list(results or [result])
         trace["final_output_recorded"] = True
         trace["action_recorded"] = True
         return {
             "system": name,
             "answer": result.text,
-            "action": "EXECUTE",
+            "action": action,
             "trace": trace,
             "trace_completeness_common": common_trace_completeness(trace),
-            "latency_seconds": result.latency_seconds,
-            "llm_calls": llm_calls,
+            "latency_seconds": cls._sum_optional(results, "latency_seconds"),
+            "llm_calls": len([r for r in results if r is not None]),
             "retrieval_calls": retrieval_calls,
-            "input_tokens": result.input_tokens,
-            "output_tokens": result.output_tokens,
-            "api_cost": result.api_cost,
+            "input_tokens": cls._sum_optional(results, "input_tokens"),
+            "output_tokens": cls._sum_optional(results, "output_tokens"),
+            "api_cost": cls._sum_optional(results, "api_cost"),
         }
 
 
@@ -56,7 +63,7 @@ class DirectLLMAdapter(BaseAdapter):
             "confidence_recorded": False,
         }
         result = self._call(f"Answer the question accurately and concisely.\nQuestion: {record['query']}")
-        return self._pack(self.name, result, trace, llm_calls=1, retrieval_calls=0)
+        return self._pack(self.name, result, trace, results=[result], retrieval_calls=0)
 
 
 class PromptChainAdapter(BaseAdapter):
@@ -75,7 +82,7 @@ class PromptChainAdapter(BaseAdapter):
             "Do not invent evidence.\n"
             f"Question: {record['query']}\nDraft: {draft.text}"
         )
-        return self._pack(self.name, final, trace, llm_calls=2, retrieval_calls=0)
+        return self._pack(self.name, final, trace, results=[draft, final], retrieval_calls=0)
 
 
 class StandardRAGAdapter(BaseAdapter):
@@ -93,7 +100,7 @@ class StandardRAGAdapter(BaseAdapter):
             "Answer using the supplied evidence. If the evidence is insufficient, say so.\n"
             f"Question: {record['query']}\nEvidence:\n{context}"
         )
-        return self._pack(self.name, result, trace, llm_calls=1, retrieval_calls=1)
+        return self._pack(self.name, result, trace, results=[result], retrieval_calls=1)
 
 
 class StrongRAGAdapter(BaseAdapter):
@@ -174,10 +181,15 @@ class GuardrailAdapter(BaseAdapter):
             "action_recorded": True,
             "final_output_recorded": True,
         }
+        generation_results = [policy] if refuse else [policy, result]
         packed = self._pack(
-            self.name, result, trace, llm_calls=calls, retrieval_calls=0
+            self.name,
+            result,
+            trace,
+            results=generation_results,
+            retrieval_calls=0,
+            action=action,
         )
-        packed["action"] = action
         packed["policy_classifier_output"] = policy.text
         return packed
 
@@ -206,4 +218,4 @@ class ReActAdapter(BaseAdapter):
             "Answer using the available evidence. If evidence is inadequate, abstain.\n"
             f"Question: {record['query']}\nEvidence:\n{context}\nControl decision: {plan.text}"
         )
-        return self._pack(self.name, final, trace, llm_calls=2, retrieval_calls=1)
+        return self._pack(self.name, final, trace, results=[plan, final], retrieval_calls=1)
