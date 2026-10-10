@@ -7,7 +7,7 @@ from otillm.explainability import ERRGBuilder
 from otillm.memory import GovernedMemory
 
 class GovernedRuntime:
-    """High-level OtiLLM v2.4 governed cognitive runtime.
+    """High-level OtiLLM v2.0 governed cognitive runtime.
 
     The runtime coordinates evidence retrieval, governance, uncertainty,
     cognitive utility optimisation, memory governance and explainability tracing.
