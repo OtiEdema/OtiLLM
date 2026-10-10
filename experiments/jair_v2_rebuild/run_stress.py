@@ -72,6 +72,7 @@ def main():
                     "condition": condition,
                     "backend": backend.name,
                     "perturbation_log": perturbation_log,
+                    "evaluation_evidence": evidence,
                     **out,
                     **metrics,
                 })
