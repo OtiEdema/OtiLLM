@@ -48,7 +48,7 @@ jobs:
       - name: Validate manifest
         working-directory: experiments/jair_v2_rebuild
         run: |
-          python validate_manifest.py data/jair_manifest.jsonl
+          python validate_manifest.py data/jair_manifest.jsonl --expected-content-n "$N_PER_DATASET" --require-full-xstest
 
       - name: Freeze provenance
         working-directory: experiments/jair_v2_rebuild
