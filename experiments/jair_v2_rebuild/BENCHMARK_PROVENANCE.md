@@ -13,7 +13,9 @@ This file records the intended public sources and evaluation roles. It is not a 
 ## FEVER
 
 - Dataset family: FEVER fact verification.
-- Evaluation role: SUPPORTS / REFUTES / NOT ENOUGH INFO claim verification.
+- Publication source: EleutherAI/fever v1.0 development split.
+- Evaluation role in this rebuild: binary SUPPORTS / REFUTES claim verification.
+- The loader used here omits NOT ENOUGH INFO records and exposes the remaining target as a ClassLabel id; the manifest builder decodes it back to textual labels before freezing.
 - Important: claim metadata alone is not sufficient for evidence-grounded evaluation. The publication manifest must pair each claim with explicit evidence text resolved from the corresponding Wikipedia evidence source.
 - The builder therefore requires both a claims file and an evidence lookup file and fails if only one is supplied.
 
