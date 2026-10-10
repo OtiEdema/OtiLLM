@@ -298,12 +298,22 @@ def fever(n: int, seed: int) -> List[Dict]:
         "EleutherAI/fever", "v1.0", split="dev", trust_remote_code=True
     )
 
+    label_feature = claims.features["label"]
+
     grouped = {}
     for r in claims:
         cid = str(r["id"])
+        raw_label = r["label"]
+        label = (
+            label_feature.int2str(int(raw_label))
+            if isinstance(raw_label, int)
+            else str(raw_label)
+        )
+        if label not in {"SUPPORTS", "REFUTES"}:
+            raise RuntimeError(f"Unexpected FEVER v1.0 label: {label!r}")
         g = grouped.setdefault(
             cid,
-            {"id": cid, "claim": r["claim"], "label": r["label"], "evidence": []},
+            {"id": cid, "claim": r["claim"], "label": label, "evidence": []},
         )
         page = str(r.get("evidence_wiki_url") or "")
         sent = int(r.get("evidence_sentence_id", -1))
@@ -366,10 +376,9 @@ def fever(n: int, seed: int) -> List[Dict]:
             gold_ids.append(eid)
 
         label = r["label"]
-        # SUPPORTS/REFUTES claims need at least one resolved gold evidence
-        # sentence for the evidence-grounded evaluation. NEI claims legitimately
-        # have no gold supporting evidence.
-        if label != "NOT ENOUGH INFO" and not gold_ids:
+        # The EleutherAI FEVER v1.0 loader used here contains SUPPORTS/REFUTES
+        # only. Every retained item must have resolved evidence.
+        if not gold_ids:
             skipped_unresolved.append(r["id"])
             continue
 
@@ -377,7 +386,7 @@ def fever(n: int, seed: int) -> List[Dict]:
             "id": f"fever_{r['id']}",
             "dataset": "fever",
             "query": (
-                "Verify the claim and answer SUPPORTS, REFUTES, or NOT ENOUGH INFO: "
+                "Verify the claim and answer SUPPORTS or REFUTES: "
                 + r["claim"]
             ),
             "references": [label],
