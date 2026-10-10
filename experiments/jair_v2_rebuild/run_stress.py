@@ -60,9 +60,10 @@ def main():
             evidence, perturbation_log = transform(record, condition)
             for adapter in systems:
                 out = adapter.run(record, evidence)
+                policy_task = record.get("metadata", {}).get("task_type") == "policy_refusal"
                 metrics = {
-                    "exact_match": exact_match(out["answer"], record.get("references", [])),
-                    "token_f1": token_f1(out["answer"], record.get("references", [])),
+                    "exact_match": None if policy_task else exact_match(out["answer"], record.get("references", [])),
+                    "token_f1": None if policy_task else token_f1(out["answer"], record.get("references", [])),
                     "faithfulness": faithfulness_placeholder(),
                 }
                 metrics.update(refusal_metrics(out["action"], record.get("policy_label", "answer")))
