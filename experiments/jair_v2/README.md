@@ -1,13 +1,12 @@
-# JAIR v2 Evaluation Suite
+# Legacy JAIR Evaluation Scripts
 
-This folder contains the OtiLLM v2.4 JAIR evaluation pipeline.
+This directory contains the original exploratory JAIR evaluation scripts.
 
-Run order:
+**Do not use these files to regenerate publication claims.** They are retained
+only for provenance. The publication-grade rebuild is in:
 
-```bash
-python prepare_jair_datasets.py
-python run_jair_experiments.py
-python run_jair_stress_tests.py
-python statistical_validation.py
-python plot_jair_results.py
-```
+`experiments/jair_v2_rebuild/`
+
+The rebuild stores per-example outputs, explicit perturbation logs, common trace
+instrumentation, independent evaluator hooks and statistics derived from raw
+observations.
