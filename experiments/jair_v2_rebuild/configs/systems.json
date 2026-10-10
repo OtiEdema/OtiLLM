@@ -7,8 +7,8 @@
     {"name": "self_checking_llm", "adapter": "external", "enabled": false},
     {"name": "guardrail_llm", "adapter": "external", "enabled": false},
     {"name": "react_agent", "adapter": "external", "enabled": false},
-    {"name": "otillm_minimal", "adapter": "otillm", "mode": "minimal", "enabled": true},
-    {"name": "otillm_balanced", "adapter": "otillm", "mode": "balanced", "enabled": true},
-    {"name": "otillm_full", "adapter": "otillm", "mode": "full", "enabled": true}
-  ]
+    {"name": "otillm_balanced", "adapter": "otillm", "mode": "balanced", "enabled": true}
+  ],
+  "disabled_until_implemented": ["otillm_minimal", "otillm_full"],
+  "note": "The current public controller does not implement experimentally distinct Minimal/Balanced/Full policies. Only Balanced is enabled to avoid reporting duplicate configurations as separate systems."
 }
