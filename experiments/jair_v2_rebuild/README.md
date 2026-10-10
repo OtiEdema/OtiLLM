@@ -11,6 +11,32 @@ This directory replaces the legacy JAIR evaluation scripts for publication-grade
 5. No statistical value is hard-coded.
 6. Missing evaluators or publication backends fail closed.
 
+
+## Build and freeze the real benchmark manifest
+
+Install evaluation dependencies, then construct the deterministic manifest from
+canonical Hugging Face datasets:
+
+```bash
+python -m pip install -r requirements-eval.txt
+
+python prepare_hf_manifest.py \
+  --n-per-dataset 200 \
+  --seed 42 \
+  --datasets truthfulqa fever hotpotqa natural_questions \
+  --out data/jair_manifest.jsonl
+
+python validate_manifest.py data/jair_manifest.jsonl
+
+python freeze_manifest.py data/jair_manifest.jsonl \
+  --seed 42 \
+  --metadata-out data/jair_manifest.metadata.json
+```
+
+The frozen metadata file records the manifest SHA-256, exact dataset counts,
+item-ID checksum, git commit and branch. The manuscript must use those frozen
+counts rather than planned sample sizes.
+
 ## Smoke test
 
 The smoke backend is for pipeline verification only and must never be cited as a publication result.
