@@ -1,4 +1,4 @@
-# OtiLLM v2.4  
+# OtiLLM v2.0  
 ## A Governed Cognitive Runtime for Evidence-Native, Memory-Augmented and Explainable Frontier AI Systems
 
 [![PyPI version](https://badge.fury.io/py/otillm.svg)](https://pypi.org/project/otillm/)
@@ -89,12 +89,10 @@ print(result.trace.to_dict())
 
 | Metric | Improvement |
 |---|---|
-| Truthfulness | +14.8% over Strong RAG |
-| Faithfulness | +16.5% over Strong RAG |
-| Unsupported claim reduction | 66.7% reduction |
-| Adversarial retrieval robustness | 70.8% unsupported claim reduction |
-| Refusal calibration | 91% accuracy |
-| Trace completeness | +38% improvement |
+The legacy benchmark table has been removed from the publication branch because the
+previous public experiment scripts did not independently regenerate those claims.
+Publication-grade results will be reported only from the rebuilt JAIR evaluation
+pipeline in `experiments/jair_v2_rebuild/`.
 
 ---
 
@@ -149,9 +147,9 @@ otillm/
 
 ```bibtex
 @article{edema2026otillm,
-  title={OtiLLM v2.4: A Governed Cognitive Runtime for Evidence-Native, Memory-Augmented and Explainable Frontier AI Systems},
+  title={OtiLLM v2.0: A Governed Cognitive Runtime for Evidence-Native, Memory-Augmented and Explainable Frontier AI Systems},
   author={Edema, Oti},
-  journal={Submitted to the Journal of Artificial Intelligence Research},
+  journal={Prepared for the Journal of Artificial Intelligence Research},
   year={2026}
 }
 ```
