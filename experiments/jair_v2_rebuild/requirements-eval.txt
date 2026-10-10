@@ -1,0 +1,7 @@
+datasets>=2.18
+transformers>=4.40
+torch>=2.1
+scipy>=1.11
+
+# Pin exact versions in the frozen publication environment after the final backend
+# and evaluator are selected. This file defines capabilities, not the archival lockfile.
