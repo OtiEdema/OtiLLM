@@ -8,3 +8,4 @@ Retry 7: dataset-specific validation enabled; current five-benchmark configurati
 Retry 8: FEVER candidate pool enlarged to guarantee 200 eligible evidence-resolved claims.
 Retry 9: XSTest now loaded from canonical pinned public GitHub CSV instead of gated HF mirror.
 Retry 10: FEVER ClassLabel ids decoded to textual SUPPORTS/REFUTES; string-reference validation enforced.
+Retry 11: flatten Natural Questions nested short-answer text to scalar string references before validation.
