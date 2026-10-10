@@ -1,0 +1,14 @@
+{
+  "systems": [
+    {"name": "direct_llm", "adapter": "external", "enabled": true},
+    {"name": "prompt_chain", "adapter": "external", "enabled": true},
+    {"name": "standard_rag", "adapter": "external", "enabled": true},
+    {"name": "strong_rag", "adapter": "external", "enabled": true},
+    {"name": "self_checking_llm", "adapter": "external", "enabled": true},
+    {"name": "guardrail_llm", "adapter": "external", "enabled": true},
+    {"name": "react_agent", "adapter": "external", "enabled": true},
+    {"name": "otillm_balanced", "adapter": "otillm", "mode": "balanced", "enabled": true}
+  ],
+  "disabled_until_implemented": ["otillm_minimal", "otillm_full"],
+  "note": "Primary publication comparison. All enabled LLM-based systems use the same pinned backend. Minimal and Full remain excluded until they execute genuinely distinct controller policies."
+}
