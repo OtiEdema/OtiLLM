@@ -5,3 +5,4 @@ Retry 4: unresolved FEVER legacy evidence pages are skipped within deterministic
 Retry 5: XSTest added; FEVER oversampling enabled; policy benchmark excluded from retrieval stress.
 Retry 6: Natural Questions evidence bounded to annotated long-answer context.
 Retry 7: dataset-specific validation enabled; current five-benchmark configuration frozen.
+Retry 8: FEVER candidate pool enlarged to guarantee 200 eligible evidence-resolved claims.
