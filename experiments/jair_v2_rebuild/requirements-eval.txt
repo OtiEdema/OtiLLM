@@ -1,7 +1,8 @@
 datasets>=2.18
-transformers>=4.40
+transformers>=4.51
 torch>=2.1
+accelerate>=1.0
 scipy>=1.11
 
-# Pin exact versions in the frozen publication environment after the final backend
-# and evaluator are selected. This file defines capabilities, not the archival lockfile.
+# Freeze exact versions after the publication environment is provisioned.
+# Model and evaluator revisions are independently pinned in configs/.
