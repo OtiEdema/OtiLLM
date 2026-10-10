@@ -93,12 +93,26 @@ def main():
                 "paired_permutation_p": pvalue,
             })
 
+    # Holm adjustment across the family of pairwise comparisons for this
+    # metric/condition.
+    ordered = sorted(enumerate(rows), key=lambda x: x[1]["paired_permutation_p"])
+    m = len(ordered)
+    running = 0.0
+    adjusted = [None] * m
+    for rank, (original_idx, row) in enumerate(ordered):
+        raw_p = row["paired_permutation_p"]
+        holm = min(1.0, (m - rank) * raw_p)
+        running = max(running, holm)
+        adjusted[original_idx] = running
+    for i, row in enumerate(rows):
+        row["holm_adjusted_p"] = adjusted[i] if adjusted else None
+
     path = Path(args.out)
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = [
         "system_a","system_b","condition","metric","n_paired",
         "mean_difference_a_minus_b","bootstrap_ci_2.5",
-        "bootstrap_ci_97.5","paired_permutation_p"
+        "bootstrap_ci_97.5","paired_permutation_p","holm_adjusted_p"
     ]
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
