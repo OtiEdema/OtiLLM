@@ -123,38 +123,39 @@ def hotpotqa(n: int, seed: int) -> List[Dict]:
 
 
 def nq_short_answers(record: Dict) -> List[str]:
-    refs = []
-    annotations = record.get("annotations", [])
-    # Converted HF schema may be list-of-dicts or dict-of-lists.
+    """Return a flat, de-duplicated list of textual Natural Questions short answers."""
+
+    refs: List[str] = []
+
+    def add_text(value):
+        if value is None:
+            return
+        if isinstance(value, str):
+            text = value.strip()
+            if text and text not in refs:
+                refs.append(text)
+            return
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                add_text(item)
+            return
+        if isinstance(value, dict):
+            # HF conversions have appeared both as {'text': ...} and nested
+            # list/dict structures. Only explicit text fields are admitted.
+            if "text" in value:
+                add_text(value.get("text"))
+            return
+
+    annotations = record.get("annotations", []) or []
+
     if isinstance(annotations, dict):
-        sa = annotations.get("short_answers", [])
-        if isinstance(sa, dict):
-            for text in sa.get("text", []) or []:
-                if isinstance(text, list):
-                    for t in text:
-                        if t and t not in refs:
-                            refs.append(t)
-                elif text and text not in refs:
-                    refs.append(text)
-        elif isinstance(sa, list):
-            annotations = [{"short_answers": sa}]
-    if isinstance(annotations, list):
+        short_answers = annotations.get("short_answers", []) or []
+        add_text(short_answers)
+    elif isinstance(annotations, list):
         for ann in annotations:
-            sa = ann.get("short_answers", [])
-            if isinstance(sa, dict):
-                texts = sa.get("text", []) or []
-                for t in texts:
-                    if isinstance(t, list):
-                        for tt in t:
-                            if tt and tt not in refs:
-                                refs.append(tt)
-                    elif t and t not in refs:
-                        refs.append(t)
-            else:
-                for x in sa or []:
-                    t = x.get("text") if isinstance(x, dict) else None
-                    if t and t not in refs:
-                        refs.append(t)
+            if isinstance(ann, dict):
+                add_text(ann.get("short_answers", []) or [])
+
     return refs
 
 
