@@ -33,7 +33,7 @@ Before a publication run:
 Then run:
 
 ```bash
-python run_experiments.py --manifest data/jair_manifest.jsonl --systems configs/systems.json --backend configs/backend.json --out results/raw.jsonl
+python run_experiments.py --manifest data/jair_manifest.jsonl --systems configs/systems_publication.json --backend configs/backend.json --out results/raw.jsonl
 python run_stress.py --manifest data/jair_manifest.jsonl --systems configs/systems.json --backend configs/backend.json --out results/stress_raw.jsonl
 python aggregate_results.py --input results/raw.jsonl --out results/summary.csv
 python statistical_validation.py --input results/raw.jsonl --out results/statistics.csv
