@@ -1,33 +1,35 @@
 # Research and Reproducibility
 
-This repository supports the paper:
+This repository contains the evolving OtiLLM research codebase.
 
-**OtiLLM: A Governed Runtime Framework for Reducing Hallucination and Improving Explainability in Large Language Model Systems**
+The JAIR resubmission is being rebuilt on the branch:
 
-## Version
+`jair-v2.0-rebuild`
 
-The paper is based on:
+## Publication version
 
-```text
-OtiLLM 0.1.0
-```
+The manuscript concerns **OtiLLM v2.0**, distributed on PyPI as package version **0.2.0**.
+
+## Reproducibility boundary
+
+Legacy exploratory experiment scripts are retained for provenance but must not be used to substantiate publication claims. The publication-grade evaluation is being rebuilt under:
+
+`experiments/jair_v2_rebuild/`
+
+A result is eligible for the manuscript only when it can be regenerated from archived per-example outputs, exact system configurations, evaluator definitions and statistical scripts.
 
 ## Repository
 
 https://github.com/OtiEdema/OtiLLM
 
-## PyPI Package
+## PyPI package
 
-https://pypi.org/project/otillm/
+https://pypi.org/project/otillm/0.2.0/
 
-## Reproducibility Statement
+## Intended use
 
-OtiLLM 0.1.0 is released as an open-source Python package to support transparent evaluation, extension, and reproduction. The repository contains source code, tests, examples, architecture documentation, and packaging files.
-
-## Intended Use
-
-OtiLLM is intended for research and engineering work on governed, explainable, and evidence-grounded AI systems.
+OtiLLM is a research framework for governed, evidence-aware, policy-constrained and traceable LLM runtimes.
 
 ## Limitations
 
-This release is a foundational runtime framework. It does not claim to be a fully trained foundation model or production-grade distributed infrastructure.
+OtiLLM v2.0 is a research runtime framework, not a foundation model. Several mechanisms described by the formal architecture remain partial or architectural and are identified explicitly in `experiments/jair_v2_rebuild/IMPLEMENTATION_STATUS.md`.
