@@ -19,13 +19,20 @@ def split_claims(text: str) -> List[str]:
 
 
 class NLIEvaluator:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, revision: str | None = None):
         try:
             from transformers import pipeline
         except ImportError as e:
             raise RuntimeError("Install transformers and torch to use NLI evaluation.") from e
         self.model_name = model_name
-        self.pipe = pipeline("text-classification", model=model_name, tokenizer=model_name, return_all_scores=True)
+        self.revision = revision
+        self.pipe = pipeline(
+            "text-classification",
+            model=model_name,
+            tokenizer=model_name,
+            revision=revision,
+            return_all_scores=True,
+        )
 
     def entailment_probability(self, premise: str, hypothesis: str) -> float:
         outputs = self.pipe({"text": premise, "text_pair": hypothesis})[0]
