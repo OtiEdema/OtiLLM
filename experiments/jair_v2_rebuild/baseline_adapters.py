@@ -121,7 +121,7 @@ class StrongRAGAdapter(BaseAdapter):
             "Use only well-supported evidence. Resolve conflicts explicitly and abstain if support is inadequate.\n"
             f"Question: {record['query']}\nRanked evidence:\n{context}"
         )
-        return self._pack(self.name, result, trace, llm_calls=1, retrieval_calls=1)
+        return self._pack(self.name, result, trace, results=[result], retrieval_calls=1)
 
 
 class SelfCheckingAdapter(BaseAdapter):
@@ -139,7 +139,7 @@ class SelfCheckingAdapter(BaseAdapter):
             "Check the draft for factual errors. Return a corrected answer only.\n"
             f"Question: {record['query']}\nDraft: {draft.text}"
         )
-        return self._pack(self.name, final, trace, llm_calls=2, retrieval_calls=0)
+        return self._pack(self.name, final, trace, results=[draft, final], retrieval_calls=0)
 
 
 class GuardrailAdapter(BaseAdapter):
