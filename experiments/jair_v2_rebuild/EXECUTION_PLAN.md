@@ -56,3 +56,18 @@ disagreements without using the adjudicated sample for threshold tuning.
 
 Only tables, figures and claims produced by these frozen outputs are eligible
 for the JAIR manuscript. Legacy values remain quarantined.
+
+
+## Phase A completion checkpoint
+
+The clean publication runner is designed to produce 10,000 observations from
+1,250 frozen items × 8 systems. After all deterministic shards are complete,
+merge them with `merge_result_shards.py` and require exactly 10,000 unique
+`(id, system, condition)` keys before any downstream scoring or manuscript
+analysis.
+
+The retrieval-stress phase now defaults to the five perturbed conditions only:
+`noisy`, `contradictory`, `incomplete`, `adversarial`, and `stale`.
+The clean condition is reused from Phase A rather than regenerated. With 800
+content items × 4 retrieval-consuming systems × 5 perturbations, the expected
+stress output is 16,000 observations.
