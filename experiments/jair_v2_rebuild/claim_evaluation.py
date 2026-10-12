@@ -21,18 +21,23 @@ def split_claims(text: str) -> List[str]:
 class NLIEvaluator:
     def __init__(self, model_name: str, revision: str | None = None):
         try:
+            import torch
             from transformers import pipeline
         except ImportError as e:
             raise RuntimeError("Install transformers and torch to use NLI evaluation.") from e
         self.model_name = model_name
         self.revision = revision
+        device = 0 if torch.cuda.is_available() else -1
+        self.device = "cuda:0" if device == 0 else "cpu"
         self.pipe = pipeline(
             "text-classification",
             model=model_name,
             tokenizer=model_name,
             revision=revision,
             return_all_scores=True,
+            device=device,
         )
+        print(f"NLI evaluator device={self.device}")
 
     def entailment_probability(self, premise: str, hypothesis: str) -> float:
         outputs = self.pipe({"text": premise, "text_pair": hypothesis})[0]
