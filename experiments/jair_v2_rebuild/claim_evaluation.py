@@ -34,18 +34,42 @@ class NLIEvaluator:
             model=model_name,
             tokenizer=model_name,
             revision=revision,
-            return_all_scores=True,
+            top_k=None,
             device=device,
         )
         print(f"NLI evaluator device={self.device}")
 
     def entailment_probability(self, premise: str, hypothesis: str) -> float:
-        outputs = self.pipe({"text": premise, "text_pair": hypothesis})[0]
-        probs = {str(x["label"]).lower(): float(x["score"]) for x in outputs}
+        outputs = self.pipe({"text": premise, "text_pair": hypothesis})
+
+        # transformers pipeline output shape varies slightly across versions:
+        # it may be a dict, a list of dicts, or a single nested list.
+        if isinstance(outputs, dict):
+            outputs = [outputs]
+        elif (
+            isinstance(outputs, list)
+            and len(outputs) == 1
+            and isinstance(outputs[0], list)
+        ):
+            outputs = outputs[0]
+
+        if not isinstance(outputs, list) or not all(
+            isinstance(x, dict) for x in outputs
+        ):
+            raise RuntimeError(
+                f"Unexpected NLI pipeline output type/shape: {type(outputs).__name__}"
+            )
+
+        probs = {
+            str(x.get("label", "")).lower(): float(x.get("score", 0.0))
+            for x in outputs
+        }
         for key, value in probs.items():
             if "entail" in key:
                 return value
-        raise RuntimeError(f"Could not identify entailment label from {sorted(probs)}")
+        raise RuntimeError(
+            f"Could not identify entailment label from {sorted(probs)}"
+        )
 
     def score_faithfulness(self, answer: str, evidence: List[Dict], threshold: float = 0.5) -> Dict:
         claims = split_claims(answer)
