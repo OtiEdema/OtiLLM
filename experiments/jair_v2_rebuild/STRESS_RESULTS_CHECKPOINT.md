@@ -28,5 +28,14 @@ Per dataset:
 - HotpotQA: 4,000
 - Natural Questions: 4,000
 
-The merged-file row count, uniqueness check, and SHA-256 should be recorded
-after shard merge validation.
+Merged-file validation:
+- Rows: 16,000
+- Unique keys: 16,000
+- Duplicate keys: 0
+- Merged file size: 86.79 MB
+- Merged stress-results SHA-256:
+  `6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098`
+
+This checksum is the authoritative Phase B merged-result integrity value for
+the JAIR v2.0 rebuild. Downstream scoring and statistical analysis should use
+this merged file or a byte-identical copy.
