@@ -58,12 +58,16 @@ def stress_lines(rows, metric, title, ylabel, out):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--summary", type=Path, required=True)
+    p.add_argument("--macro", type=Path, required=True)
     p.add_argument("--out-dir", type=Path, required=True)
     args = p.parse_args()
 
     rows = read_rows(args.summary)
-    clean = [r for r in rows if r.get("condition") == "clean"]
-    stress = [r for r in rows if r.get("condition") != "clean"]
+    macro = read_rows(args.macro)
+    # Headline quality figures use equal-weight macro averages over the four
+    # content benchmarks; XSTest is intentionally excluded.
+    clean = [r for r in macro if r.get("condition") == "clean"]
+    stress = [r for r in macro if r.get("condition") != "clean"]
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     for metric, title, ylabel in [
