@@ -36,11 +36,27 @@ class OtiLLMAdapter:
             )
 
         start = perf_counter()
-        response = runtime.query(record["query"], mode=self.mode)
+        task_type = record.get("metadata", {}).get("task_type", "content")
+        response = runtime.query(
+            record["query"],
+            mode=self.mode,
+            context={"task_type": task_type},
+        )
         elapsed = perf_counter() - start
 
         trace = asdict(response.trace)
         generation = getattr(runtime.generator, "last_generation_result", None)
+        policy_generation = getattr(runtime.generator, "last_policy_result", None)
+        generation_results = [
+            x for x in (policy_generation, generation) if x is not None
+        ]
+
+        def sum_optional(attr):
+            vals = [
+                getattr(x, attr, None) for x in generation_results
+                if isinstance(getattr(x, attr, None), (int, float))
+            ]
+            return sum(vals) if vals else None
         common_trace = {
             "query_received": True,
             "retrieval_attempted": True,
@@ -60,15 +76,12 @@ class OtiLLMAdapter:
             "retrieved_sources": response.trace.retrieved_sources,
             "evidence_sufficiency": response.trace.evidence_sufficiency,
             "confidence": response.trace.confidence,
-            "latency_seconds": (
-                getattr(generation, "latency_seconds", None)
-                if generation is not None else elapsed
-            ),
-            "llm_calls": 1 if generation is not None else 0,
-            "retrieval_calls": 1,
-            "input_tokens": getattr(generation, "input_tokens", None) if generation is not None else None,
-            "output_tokens": getattr(generation, "output_tokens", None) if generation is not None else None,
-            "api_cost": getattr(generation, "api_cost", None) if generation is not None else None,
+            "latency_seconds": sum_optional("latency_seconds") if generation_results else elapsed,
+            "llm_calls": len(generation_results),
+            "retrieval_calls": 0 if task_type == "policy_refusal" else 1,
+            "input_tokens": sum_optional("input_tokens"),
+            "output_tokens": sum_optional("output_tokens"),
+            "api_cost": sum_optional("api_cost"),
         }
 
 
