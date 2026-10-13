@@ -214,7 +214,7 @@ and outlines future work.
 
 Retrieval-augmented generation (RAG) combines parametric language-model
 knowledge with external non-parametric evidence and has become a standard
-approach for knowledge-intensive generation (Lewis et al., 2020). Its central
+approach for knowledge-intensive generation \citep{lewis2020rag}. Its central
 advantage is that model output can be conditioned on retrievable evidence
 rather than relying exclusively on parameters learned during pre-training.
 This improves knowledge updating and can provide provenance for generated
@@ -225,7 +225,7 @@ sufficient, contradictory, stale, or otherwise unsuitable for generation.
 Subsequent work has therefore explored more adaptive forms of retrieval and
 reflection. Self-RAG, for example, learns when to retrieve and uses
 self-reflection signals to critique retrieved passages and generated responses
-(Asai et al., 2024). These approaches show that retrieval itself can be made
+\citep{asai2024selfrag}. These approaches show that retrieval itself can be made
 conditional rather than indiscriminate.
 
 OtiLLM is related to this line of work but addresses a different control level.
@@ -239,7 +239,7 @@ state.
 
 ReAct integrates reasoning and acting by interleaving model-generated reasoning
 with actions that query external environments or knowledge sources
-(Yao et al., 2023). More broadly, agentic LLM systems increasingly combine
+\citep{yao2023react}. More broadly, agentic LLM systems increasingly combine
 planning, tools, retrieval, memory, and iterative control.
 
 This literature is relevant to OtiLLM because both approaches move beyond a
@@ -255,10 +255,10 @@ a claim that the experiment reproduces unrestricted autonomous agents.
 LLM guardrails seek to constrain model behaviour at the input, output, or
 system level. Recent surveys describe guardrails as a broad class of
 safeguarding mechanisms for risks including harmful content, privacy,
-hallucination, bias, and adversarial behaviour (Dong et al., 2024).
+hallucination, bias, and adversarial behaviour \citep{dong2024safeguarding}.
 Constitutional AI similarly demonstrates that explicit principles can be used
 to critique, revise, and train model behaviour toward safer outputs
-(Bai et al., 2022).
+\citep{bai2022constitutional}.
 
 These approaches establish the importance of policy constraints, but policy
 compliance is only one dimension of runtime reliability. A request may be safe
@@ -280,7 +280,7 @@ Selective prediction studies when a model should abstain rather than return a
 potentially unreliable prediction. In selective question answering, the
 objective is to maximise coverage subject to an acceptable error rate, making
 abstention a first-class decision rather than a failure mode
-(Kamath, Jia, and Liang, 2020).
+\citep{kamath2020selective}.
 
 This perspective is central to the present study. OtiLLM is intentionally
 selective: evidence or confidence below threshold can produce deferral rather
@@ -407,9 +407,10 @@ then execute directly; a disallowed request is refused.
 This separation prevents two semantically different causes of non-execution
 from being conflated:
 
-[
-\textbackslash\{\}text\{policy risk\} \textbackslash\{\}neq \textbackslash\{\}text\{evidence insufficiency\}.
-]
+\begin{equation}
+\text{policy risk} \neq \text{evidence insufficiency}.
+\label{eq:policy-vs-evidence}
+\end{equation}
 
 \subsection{Evidence retrieval and scoring}
 
@@ -431,9 +432,10 @@ is used as a gate rather than merely as an explanatory statistic.
 Let (s\_e) denote evidence sufficiency and (	au\_e) the configured evidence
 threshold. The publication controller implements:
 
-[
-s\_e < 	au\_e \textbackslash\{\}Rightarrow A = \textbackslash\{\}text\{defer/refine\}.
-]
+\begin{equation}
+s_e < \tau_e \Rightarrow A = \text{defer/refine}.
+\label{eq:evidence-gate}
+\end{equation}
 
 When this condition holds, generation is not invoked. The runtime returns a
 bounded response indicating that available evidence is insufficient.
@@ -446,9 +448,10 @@ content experiments.
 The publication controller derives confidence from evidence sufficiency and
 policy posture. In the current implementation,
 
-[
-c = \textbackslash\{\}min\textbackslash\{\}left(1, 0.65s\_e + 0.35s\_p\textbackslash\{\}right),
-]
+\begin{equation}
+c = \min\left(1, 0.65s_e + 0.35s_p\right).
+\label{eq:confidence}
+\end{equation}
 
 where (s\_e) is evidence sufficiency and (s\_p) is the policy score.
 
@@ -542,9 +545,10 @@ controller variants are not presented as empirically established.
 The broader abstraction underlying OtiLLM can be represented as a state-action
 system:
 
-[
-x\_t = (q\_t, e\_t, p\_t, c\_t, m\_t, \textbackslash\{\}pi\_t),
-]
+\begin{equation}
+x_t = (q_t, e_t, p_t, c_t, m_t, \pi_t).
+\label{eq:runtime-state}
+\end{equation}
 
 where (q\_t) is the current query, (e\_t) is evidence state, (p\_t) is
 policy state, (c\_t) is confidence, (m\_t) is memory state, and (pi\_t)
@@ -552,9 +556,10 @@ denotes provenance and trace state.
 
 A governed runtime maps this state to an action:
 
-[
-a\_t = \textbackslash\{\}Gamma(x\_t),
-]
+\begin{equation}
+a_t = \Gamma(x_t).
+\label{eq:runtime-action}
+\end{equation}
 
 where (Gamma) is the runtime control policy and (a\_t) may represent
 execution, deferral, refusal, retrieval reconsideration, clarification, or
@@ -611,14 +616,15 @@ treating them as independent experimental systems.
 
 Eight systems are evaluated in the clean benchmark:
 
-1. Direct LLM;
-2. Prompt Chain;
-3. Standard RAG;
-4. Strong RAG;
-5. Self-Checking LLM;
-6. Guardrail LLM;
-7. a bounded ReAct-style agent; and
-8. OtiLLM Balanced.
+\begin{enumerate}
+\item Direct LLM;
+\item Prompt Chain;
+\item Standard RAG;
+\item Strong RAG;
+\item Self-Checking LLM;
+\item Guardrail LLM;
+\item a bounded ReAct-style agent; and
+\item OtiLLM Balanced.\end{enumerate}
 
 For retrieval-stress testing, only the four systems that consume the common
 evidence context are evaluated: Standard RAG, Strong RAG, ReAct, and OtiLLM
@@ -676,7 +682,7 @@ contains 1,250 records:
 \item FEVER: 200;
 \item HotpotQA: 200;
 \item Natural Questions: 200; and
-\item XSTest: 450, comprising 250 safe and 200 unsafe contrast prompts.
+\item XSTest: 450, comprising 250 safe and 200 unsafe contrast prompts \citep{rottger2024xstest}.
 \end{itemize}
 
 The corrected frozen manifest has SHA-256
@@ -721,7 +727,7 @@ The clean condition is taken from the clean evaluation rather than duplicated
 inside the stress run. Stress testing is restricted to the 800 content items
 from TruthfulQA, FEVER, HotpotQA, and Natural Questions and to the four
 retrieval-consuming systems. This yields 16,000 stress observations:
-800 items × 5 perturbation conditions × 4 systems.
+$800 \times 5 \times 4 = 16{,}000$ system--condition observations.
 
 Each transformed evidence set is archived in the corresponding raw result row,
 so subsequent faithfulness scoring is performed against the exact evidence
@@ -748,17 +754,18 @@ transient notebook disconnections did not invalidate completed work. Raw
 outputs and intermediate artefacts were checkpointed to persistent Google
 Drive storage after each stage. The workflow comprised:
 
-1. frozen-manifest validation;
-2. clean-generation shards;
-3. clean shard merge and integrity verification;
-4. retrieval-stress generation shards;
-5. stress shard merge and integrity verification;
-6. independent NLI scoring of clean outputs;
-7. independent NLI scoring of stress outputs;
-8. aggregate metric calculation;
-9. selective paired statistical validation;
-10. XSTest policy analysis; and
-11. generation of publication tables and figures.
+\begin{enumerate}
+\item frozen-manifest validation;
+\item clean-generation shards;
+\item clean shard merge and integrity verification;
+\item retrieval-stress generation shards;
+\item stress shard merge and integrity verification;
+\item independent NLI scoring of clean outputs;
+\item independent NLI scoring of stress outputs;
+\item aggregate metric calculation;
+\item selective paired statistical validation;
+\item XSTest policy analysis; and
+\item generation of publication tables and figures.\end{enumerate}
 
 Generation and scoring were intentionally separated. This prevents the model
 under evaluation from serving as its own semantic judge and allows generated
@@ -780,7 +787,7 @@ hardware configuration or wall-clock duration.
 \label{fig:repro-pipeline}
 \end{figure*}
 
-\subsection{Independent factuality and faithfulness evaluation}
+\subsection{Automated reference factuality and faithfulness evaluation}
 
 Generated outputs are evaluated after generation using the independent NLI
 model MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli, revision
@@ -864,7 +871,6 @@ execution path. The correction:
 1. passes the task type as runtime context;
 2. applies the static runtime policy first;
 3. applies a semantic SAFE/UNSAFE classifier using the same pinned model and
-   the same classification instruction as the Guardrail baseline;
 4. permits safe policy-only prompts to execute without external evidence;
 5. refuses unsafe prompts; and
 6. leaves all content QA and retrieval-stress execution unchanged.
@@ -1042,7 +1048,7 @@ unsafe-prompt accuracy of 0.985 and an unsafe-answer rate of 0.015.
 
 Compared with the non-policy-aware baselines, which each achieved 0.5556
 overall policy correctness, OtiLLM's advantage was significant
-(Holm-adjusted p=2.42×10\textasciicircum{}-24). OtiLLM matched the dedicated Guardrail baseline
+(Holm-adjusted $p=2.42\times10^{-24}$). OtiLLM matched the dedicated Guardrail baseline
 exactly on overall policy correctness, false-refusal rate, and unsafe-answer
 rate (McNemar p=1.0 for all three comparisons). Because the corrected OtiLLM
 policy path intentionally uses the same pinned backend and classification
