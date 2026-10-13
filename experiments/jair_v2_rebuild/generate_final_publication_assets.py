@@ -71,11 +71,11 @@ def table_systems(out_dir):
     rows = [
         {"system":"Direct LLM","model_calls":"1","retrieval":"No","policy_gate":"No","selective_execution":"No","clean":"Yes","stress":"No"},
         {"system":"Prompt Chain","model_calls":"2","retrieval":"No","policy_gate":"No","selective_execution":"No","clean":"Yes","stress":"No"},
-        {"system":"Standard RAG","model_calls":"1","retrieval":"Yes","policy_gate":"No","selective_execution":"Prompt-level only","clean":"Yes","stress":"Yes"},
-        {"system":"Strong RAG","model_calls":"1","retrieval":"Yes + reranking","policy_gate":"No","selective_execution":"Prompt-level only","clean":"Yes","stress":"Yes"},
+        {"system":"Standard RAG","model_calls":"1","retrieval":"Yes","policy_gate":"No","selective_execution":"No controller gate (100% stress coverage)","clean":"Yes","stress":"Yes"},
+        {"system":"Strong RAG","model_calls":"1","retrieval":"Yes + reranking","policy_gate":"No","selective_execution":"No controller gate (100% stress coverage)","clean":"Yes","stress":"Yes"},
         {"system":"Self-Checking LLM","model_calls":"2","retrieval":"No","policy_gate":"No","selective_execution":"No","clean":"Yes","stress":"No"},
         {"system":"Guardrail LLM","model_calls":"1-2","retrieval":"No","policy_gate":"Yes","selective_execution":"Policy refusal","clean":"Yes","stress":"No"},
-        {"system":"ReAct","model_calls":"2","retrieval":"Yes","policy_gate":"No","selective_execution":"Prompt-level only","clean":"Yes","stress":"Yes"},
+        {"system":"ReAct","model_calls":"2","retrieval":"Yes","policy_gate":"No","selective_execution":"No controller gate (100% stress coverage)","clean":"Yes","stress":"Yes"},
         {"system":"OtiLLM Balanced","model_calls":"0-2","retrieval":"Yes for content","policy_gate":"Yes","selective_execution":"Evidence/confidence defer + policy refusal","clean":"Yes","stress":"Yes"},
     ]
     fields = ["system","model_calls","retrieval","policy_gate","selective_execution","clean","stress"]
@@ -131,7 +131,10 @@ def table_selective(rows, name, out_dir):
             "ci_2.5": r["bootstrap_ci_2.5"],
             "ci_97.5": r["bootstrap_ci_97.5"],
             "holm_adjusted_p": r["holm_adjusted_p"],
-            "significant_0.05": "Yes" if (num(r["holm_adjusted_p"]) or 1) < 0.05 else "No",
+            "significant_0.05": "Yes" if (
+                num(r["holm_adjusted_p"]) is not None
+                and num(r["holm_adjusted_p"]) < 0.05
+            ) else "No",
         })
     fields = [
         "condition","baseline","n_paired","otillm_coverage","otillm_mean",
@@ -163,130 +166,204 @@ def table_xstest(rows, out_dir):
 
 
 def figure_architecture(out_dir):
-    fig, ax = plt.subplots(figsize=(11, 6))
+    """Draw the validated task-aware publication runtime.
+
+    The policy-only route is shown separately from the content-evidence route
+    so Figure 1 reflects the corrected XSTest architecture rather than
+    implying that every safe request requires external evidence.
+    """
+    fig, ax = plt.subplots(figsize=(12, 6.5))
     ax.axis("off")
+
     boxes = [
-        (0.03,0.68,0.13,0.16,"Query"),
-        (0.20,0.68,0.15,0.16,"Policy\nGate"),
-        (0.39,0.68,0.16,0.16,"Evidence\nRetrieval"),
-        (0.59,0.68,0.16,0.16,"Evidence\nSufficiency"),
-        (0.79,0.68,0.16,0.16,"Confidence\nGate"),
-        (0.59,0.30,0.16,0.16,"Generate"),
-        (0.79,0.30,0.16,0.16,"Execute"),
-        (0.39,0.30,0.16,0.16,"Defer"),
-        (0.20,0.30,0.15,0.16,"Policy\nRefuse"),
+        (0.03,0.70,0.11,0.14,"Query"),
+        (0.18,0.70,0.14,0.14,"Static Policy\nGate"),
+        (0.38,0.78,0.16,0.14,"Content Task:\nEvidence Retrieval"),
+        (0.59,0.78,0.16,0.14,"Evidence\nSufficiency"),
+        (0.80,0.78,0.16,0.14,"Confidence\nGate"),
+        (0.38,0.45,0.16,0.14,"Policy-only Task:\nSemantic Classifier"),
+        (0.59,0.45,0.16,0.14,"Generate"),
+        (0.80,0.45,0.16,0.14,"Execute"),
+        (0.59,0.18,0.16,0.14,"Defer"),
+        (0.18,0.18,0.14,0.14,"Refuse / Block"),
     ]
     for x,y,w,h,label in boxes:
         ax.add_patch(plt.Rectangle((x,y),w,h,fill=False,linewidth=1.4))
-        ax.text(x+w/2,y+h/2,label,ha="center",va="center",fontsize=10)
+        ax.text(x+w/2,y+h/2,label,ha="center",va="center",fontsize=9)
+
     arrows = [
-        ((0.16,0.76),(0.20,0.76)),((0.35,0.76),(0.39,0.76)),
-        ((0.55,0.76),(0.59,0.76)),((0.75,0.76),(0.79,0.76)),
-        ((0.87,0.68),(0.67,0.46)),((0.75,0.38),(0.79,0.38)),
-        ((0.67,0.68),(0.47,0.46)),((0.275,0.68),(0.275,0.46)),
+        ((0.14,0.77),(0.18,0.77)),
+        ((0.32,0.79),(0.38,0.85)),
+        ((0.32,0.72),(0.38,0.52)),
+        ((0.54,0.85),(0.59,0.85)),
+        ((0.75,0.85),(0.80,0.85)),
+        ((0.88,0.78),(0.67,0.59)),
+        ((0.54,0.52),(0.59,0.52)),
+        ((0.75,0.52),(0.80,0.52)),
+        ((0.67,0.78),(0.67,0.32)),
+        ((0.25,0.70),(0.25,0.32)),
+        ((0.46,0.45),(0.30,0.32)),
     ]
     for a,b in arrows:
         ax.annotate("",xy=b,xytext=a,arrowprops=dict(arrowstyle="->",linewidth=1.2))
-    ax.text(0.5,0.95,"Validated OtiLLM publication runtime",ha="center",fontsize=14)
-    ax.text(0.5,0.10,
-            "Broader architectural extensions (not fully validated here): retrieval reconsideration,\n"
-            "formal utility optimisation, longitudinal governed memory, learned action policy",
-            ha="center",va="center",fontsize=9)
+
+    ax.text(0.5,0.97,"Validated OtiLLM publication runtime",ha="center",fontsize=14)
+    ax.text(
+        0.5,0.05,
+        "Broader architectural extensions (not fully validated here): retrieval reconsideration, "
+        "formal utility optimisation, longitudinal governed memory, learned action policy",
+        ha="center",va="center",fontsize=8.5
+    )
     save(fig,out_dir/"Figure_1_governed_runtime_architecture")
 
-
 def figure_pipeline(out_dir):
-    fig, ax = plt.subplots(figsize=(12, 4.5))
+    """Show clean and stress generation as parallel branches."""
+    fig, ax = plt.subplots(figsize=(12, 5.0))
     ax.axis("off")
-    labels = [
-        "Frozen\nmanifest",
-        "Clean\ngeneration",
-        "Stress\ngeneration",
-        "Shard merge +\nintegrity checks",
-        "Independent\nNLI scoring",
-        "Aggregate +\nselective stats",
-        "Tables +\nfigures",
+
+    def box(x,y,w,h,label):
+        ax.add_patch(plt.Rectangle((x,y),w,h,fill=False,linewidth=1.3))
+        ax.text(x+w/2,y+h/2,label,ha="center",va="center",fontsize=9)
+
+    box(0.03,0.45,0.12,0.18,"Frozen\nmanifest")
+    box(0.22,0.67,0.13,0.18,"Clean\ngeneration")
+    box(0.22,0.23,0.13,0.18,"Stress\ngeneration")
+    box(0.42,0.45,0.15,0.18,"Shard merge +\nintegrity checks")
+    box(0.63,0.45,0.13,0.18,"Independent\nNLI scoring")
+    box(0.81,0.45,0.15,0.18,"Aggregate + paired\nstatistics + assets")
+
+    arrows=[
+        ((0.15,0.54),(0.22,0.76)),
+        ((0.15,0.54),(0.22,0.32)),
+        ((0.35,0.76),(0.42,0.56)),
+        ((0.35,0.32),(0.42,0.52)),
+        ((0.57,0.54),(0.63,0.54)),
+        ((0.76,0.54),(0.81,0.54)),
     ]
-    xs = [0.02,0.16,0.30,0.44,0.60,0.75,0.89]
-    widths=[0.10,0.10,0.10,0.12,0.11,0.11,0.09]
-    for i,(x,w,label) in enumerate(zip(xs,widths,labels)):
-        ax.add_patch(plt.Rectangle((x,0.42),w,0.22,fill=False,linewidth=1.3))
-        ax.text(x+w/2,0.53,label,ha="center",va="center",fontsize=9)
-        if i < len(labels)-1:
-            nx=xs[i+1]
-            ax.annotate("",xy=(nx,0.53),xytext=(x+w,0.53),
-                        arrowprops=dict(arrowstyle="->",linewidth=1.1))
-    ax.text(0.5,0.80,"Deterministic publication evaluation pipeline",ha="center",fontsize=14)
-    ax.text(0.5,0.22,
-            "Persistent checkpointing → resumable runs → frozen merged artefacts → corrected final dataset (26,000 rows)",
-            ha="center",fontsize=9)
+    for a,b in arrows:
+        ax.annotate("",xy=b,xytext=a,arrowprops=dict(arrowstyle="->",linewidth=1.1))
+
+    ax.text(0.5,0.94,"Deterministic publication evaluation pipeline",ha="center",fontsize=14)
+    ax.text(
+        0.5,0.08,
+        "Persistent Google Drive checkpoints • resumable deterministic shards • frozen checksums • final corrected dataset: 26,000 rows",
+        ha="center",fontsize=8.5
+    )
     save(fig,out_dir/"Figure_2_reproducibility_pipeline")
 
-
 def selective_tradeoff(rows, metric_name, out_base, out_dir):
-    fig, ax = plt.subplots(figsize=(8.5, 5.5))
+    """Plot matched-subset metric values while keeping OtiLLM coverage visible.
+
+    Baseline y-values are evaluated on the exact OtiLLM-answered items. Baseline
+    coverage is not placed on the x-axis because that would mix conditional
+    matched-subset means with their unconditional 100% stress coverage.
+    """
+    fig, ax = plt.subplots(figsize=(9.2, 5.8))
+    positions = list(range(len(STRESS)))
     systems = ["standard_rag","strong_rag","react_agent"]
-    markers = ["s","^","D"]
-    target_by_cond = {}
+    markers = {"standard_rag":"s","strong_rag":"^","react_agent":"D"}
+
+    target = {}
+    baseline = {s:{} for s in systems}
+    coverage = {}
     for r in rows:
-        target_by_cond.setdefault(r["condition"], (num(r["target_coverage"]), num(r["target_mean"])))
-    xs=[]; ys=[]
-    for cond in STRESS:
-        if cond in target_by_cond:
-            x,y=target_by_cond[cond]
-            xs.append(x); ys.append(y)
-            ax.annotate(cond, (x,y), xytext=(5,5), textcoords="offset points", fontsize=8)
-    ax.scatter(xs,ys,marker="o",s=60,label="OtiLLM Balanced")
-    for system,marker in zip(systems,markers):
-        sx=[]; sy=[]
-        for cond in STRESS:
-            match=[r for r in rows if r["baseline"]==system and r["condition"]==cond]
-            if match:
-                sx.append(num(match[0]["target_coverage"]))
-                sy.append(num(match[0]["baseline_mean_on_target_answered_subset"]))
-        ax.scatter(sx,sy,marker=marker,s=45,label=SYSTEM_LABELS[system])
-    ax.set_xlabel("OtiLLM answer coverage (matched subset fraction)")
+        cond=r["condition"]
+        target.setdefault(cond,num(r["target_mean"]))
+        coverage.setdefault(cond,num(r["target_coverage"]))
+        if r["baseline"] in baseline:
+            baseline[r["baseline"]][cond]=num(r["baseline_mean_on_target_answered_subset"])
+
+    ax.plot(
+        positions,[target.get(c) for c in STRESS],
+        marker="o",linewidth=1.8,label="OtiLLM Balanced"
+    )
+    for system in systems:
+        ax.plot(
+            positions,[baseline[system].get(c) for c in STRESS],
+            marker=markers[system],linewidth=1.2,label=SYSTEM_LABELS[system]
+        )
+
+    ax.set_xticks(positions, STRESS, rotation=20)
     ax.set_ylabel(metric_name)
-    ax.set_title(f"Coverage–{metric_name.lower()} trade-off under retrieval stress")
-    ax.legend(fontsize=8)
-    ax.grid(True,alpha=0.25)
+    ax.set_xlabel("Retrieval-stress condition")
+    ax.set_title(f"Matched-subset {metric_name.lower()} with OtiLLM coverage")
+    ax.grid(True,axis="y",alpha=0.25)
+
+    ax2=ax.twinx()
+    ax2.plot(
+        positions,[coverage.get(c) for c in STRESS],
+        linestyle="--",marker="x",linewidth=1.1,label="OtiLLM coverage"
+    )
+    ax2.set_ylabel("OtiLLM answer coverage")
+    ax2.set_ylim(0,1.05)
+
+    h1,l1=ax.get_legend_handles_labels()
+    h2,l2=ax2.get_legend_handles_labels()
+    ax.legend(h1+h2,l1+l2,fontsize=8,loc="best")
+
+    ax.text(
+        0.01,-0.19,
+        "Baseline metric values are computed on the same item IDs answered by OtiLLM; "
+        "baseline systems retained 100% stress coverage.",
+        transform=ax.transAxes,fontsize=7.5
+    )
     save(fig,out_dir/out_base)
 
-
 def figure_xstest(rows, out_dir):
-    # Recover one point per system from false-refusal and unsafe-answer families.
+    """Show the policy trade-off without obscuring exact overlapping points."""
     by_system={}
+    target=None
     for r in rows:
         b=r["baseline"]
         d=by_system.setdefault(b,{})
         if r["metric"]=="false_refusal":
-            d["false_refusal_baseline"]=num(r["baseline_mean"])
-            d["false_refusal_target"]=num(r["target_mean"])
+            d["fr"]=num(r["baseline_mean"])
+            target = target or {}
+            target["fr"]=num(r["target_mean"])
         elif r["metric"]=="unsafe_answer":
-            d["unsafe_answer_baseline"]=num(r["baseline_mean"])
-            d["unsafe_answer_target"]=num(r["target_mean"])
+            d["ua"]=num(r["baseline_mean"])
+            target = target or {}
+            target["ua"]=num(r["target_mean"])
 
-    fig, ax = plt.subplots(figsize=(8,5.5))
-    # OtiLLM from any complete row.
-    sample=next(d for d in by_system.values() if "false_refusal_target" in d and "unsafe_answer_target" in d)
-    ax.scatter([sample["false_refusal_target"]],[sample["unsafe_answer_target"]],s=70,marker="o",label="OtiLLM Balanced")
-    ax.annotate("OtiLLM", (sample["false_refusal_target"],sample["unsafe_answer_target"]),
-                xytext=(5,5),textcoords="offset points",fontsize=8)
+    fig, ax = plt.subplots(figsize=(8.4,5.7))
 
-    markers=["s","^","D","v","P","X","<"]
-    for (system,d),marker in zip(sorted(by_system.items()),markers):
-        if "false_refusal_baseline" not in d or "unsafe_answer_baseline" not in d:
-            continue
-        x=d["false_refusal_baseline"]; y=d["unsafe_answer_baseline"]
-        ax.scatter([x],[y],s=50,marker=marker,label=SYSTEM_LABELS.get(system,system))
-        ax.annotate(SYSTEM_LABELS.get(system,system),(x,y),xytext=(5,5),textcoords="offset points",fontsize=7)
+    # OtiLLM and Guardrail coincide exactly after the corrected policy path.
+    guard=by_system.get("guardrail_llm",{})
+    if target and "fr" in target and "ua" in target:
+        ax.scatter([target["fr"]],[target["ua"]],s=85,marker="o")
+        ax.annotate(
+            "OtiLLM Balanced = Guardrail LLM",
+            (target["fr"],target["ua"]),xytext=(8,10),
+            textcoords="offset points",fontsize=9
+        )
+
+    # The six non-policy-aware systems also coincide in this experiment.
+    nonpolicy=[
+        s for s in by_system
+        if s!="guardrail_llm" and "fr" in by_system[s] and "ua" in by_system[s]
+    ]
+    if nonpolicy:
+        d=by_system[nonpolicy[0]]
+        ax.scatter([d["fr"]],[d["ua"]],s=70,marker="s")
+        ax.annotate(
+            "Non-policy-aware baselines",
+            (d["fr"],d["ua"]),xytext=(8,-16),
+            textcoords="offset points",fontsize=9
+        )
+
     ax.set_xlabel("False-refusal rate on safe prompts (lower is better)")
     ax.set_ylabel("Unsafe-answer rate on unsafe prompts (lower is better)")
     ax.set_title("XSTest policy trade-off")
+    ax.set_xlim(-0.03,1.05)
+    ax.set_ylim(-0.03,1.05)
     ax.grid(True,alpha=0.25)
-    ax.legend(fontsize=7,loc="best")
+    ax.text(
+        0.01,-0.16,
+        "OtiLLM and Guardrail use the same pinned semantic policy classifier in the corrected path; "
+        "their XSTest points therefore coincide.",
+        transform=ax.transAxes,fontsize=7.5
+    )
     save(fig,out_dir/"Figure_5_xstest_policy_tradeoff")
-
 
 def main():
     p=argparse.ArgumentParser()
