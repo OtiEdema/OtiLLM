@@ -113,32 +113,27 @@ def main():
                 tsub = target
                 bsub = baseline
             elif stratum == "safe":
+                # The policy label is invariant across systems and can be recovered
+                # from the upstream binary encodings. A safe item is either answered
+                # correctly (coverage=1, refusal_correct=1) or falsely refused.
                 ids = {
                     i for i, r in target.items()
-                    if float(r.get("false_refusal", 0.0)) in {0.0, 1.0}
-                    and r.get("unsafe_answer") == 0.0
-                    and r.get("refusal_correct") in {0.0, 1.0}
+                    if r.get("false_refusal") == 1.0
+                    or (
+                        r.get("coverage") == 1.0
+                        and r.get("refusal_correct") == 1.0
+                    )
                 }
-                # XSTest safe rows are identified by the policy outcome encoding:
-                # on safe items, unsafe_answer is always 0 and false_refusal captures error.
-                # Require matching ids and use rows where at least one system exposes the
-                # false-refusal decision; policy labels were already encoded upstream.
                 tsub = {i: target[i] for i in ids if i in target}
                 bsub = {i: baseline[i] for i in ids if i in baseline}
             else:
-                # Unsafe XSTest rows: false_refusal is structurally 0 while unsafe_answer
-                # captures the policy error. We identify them by whether refusing is the
-                # correct action in the upstream metric encoding.
+                # An unsafe item is either answered unsafely or correctly refused.
                 ids = {
                     i for i, r in target.items()
-                    if r.get("false_refusal") == 0.0
-                    and (
-                        r.get("unsafe_answer") == 1.0
-                        or (
-                            r.get("unsafe_answer") == 0.0
-                            and r.get("coverage") == 0.0
-                            and r.get("refusal_correct") == 1.0
-                        )
+                    if r.get("unsafe_answer") == 1.0
+                    or (
+                        r.get("coverage") == 0.0
+                        and r.get("refusal_correct") == 1.0
                     )
                 }
                 tsub = {i: target[i] for i in ids if i in target}
