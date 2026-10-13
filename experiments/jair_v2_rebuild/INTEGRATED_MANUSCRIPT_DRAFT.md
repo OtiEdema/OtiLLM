@@ -1,0 +1,1306 @@
+# OtiLLM: A Governed Cognitive Runtime for Evidence-Aware LLM Systems
+
+> **Integrated JAIR manuscript draft.** This file assembles the current rebuilt sections into one manuscript-level source. It preserves the validated claim boundary and marks final publication tables/figures/citations for insertion.
+
+## Abstract
+
+Large language model (LLM) applications increasingly combine retrieval,
+reasoning, safety filters, memory, and tool orchestration, yet these mechanisms
+are often evaluated independently and leave the final execution decision
+implicit. This paper presents OtiLLM, a governed runtime for evidence-aware LLM
+systems that makes evidence sufficiency, policy state, confidence, provenance,
+and action eligibility explicit at inference time. Rather than modifying the
+underlying foundation model, OtiLLM controls whether generation should proceed,
+be deferred, or be refused.
+
+We evaluate OtiLLM Balanced against seven comparison systems using a common
+pinned Qwen3-8B backend across TruthfulQA, FEVER, HotpotQA, Natural Questions,
+and XSTest. The clean evaluation comprises 10,000 observations, while a
+retrieval-stress evaluation contributes 16,000 additional observations under
+noisy, contradictory, incomplete, adversarial, and stale evidence. Independent
+DeBERTa-based NLI scoring is used for factuality and evidence faithfulness, and
+paired bootstrap confidence intervals, permutation tests, McNemar tests, and
+Holm correction are used for inferential analysis.
+
+On clean content benchmarks, OtiLLM achieves faithfulness of 0.414 at 0.597
+coverage, corresponding to 29.4% higher faithfulness and a 13.8% lower
+unsupported-claim rate than Direct LLM, although it does not maximise raw
+accuracy. Under degraded retrieval, OtiLLM significantly improves selective
+faithfulness over Strong RAG in four of five stress conditions and over ReAct
+in three of five conditions. It also improves selective factuality over
+Standard RAG in four conditions and ReAct in three, while Strong RAG remains
+stronger in factuality in several settings. On XSTest, OtiLLM attains 90.0%
+policy correctness, with a 16.8% false-refusal rate and a 1.5% unsafe-answer
+rate, matching a dedicated guardrail baseline.
+
+These results support OtiLLM as a governed execution layer that makes the
+trade-off between coverage, evidence support, factuality, and policy compliance
+explicit. They do not support universal superiority over RAG or agentic
+baselines; instead, they show that runtime governance can produce a more
+selective and controllable reliability profile under degraded evidence and
+policy constraints.
+
+## 1. Introduction
+
+### 1.1 Motivation
+
+Modern LLM applications increasingly rely on more than a single prompt and a
+single model call. Retrieval-augmented generation introduces external
+knowledge; self-checking pipelines attempt to revise errors; agentic systems
+introduce planning and tool use; guardrails apply safety or policy constraints;
+and memory systems preserve information across interactions. These mechanisms
+improve capability, but they also make system behaviour harder to reason about.
+In many deployments, the critical decision is no longer only what answer a
+model should generate, but whether it should generate at all given the current
+evidence, confidence, policy state, provenance, and operational constraints.
+
+Most existing LLM evaluation still treats these concerns separately. Retrieval
+quality may be measured independently of refusal behaviour, safety independently
+of evidence quality, and answer accuracy independently of whether the available
+evidence justified answering. This separation can obscure important failure
+modes. A system may remain factually correct because the model recalls an
+answer from parametric knowledge even when the supplied evidence is stale or
+contradictory. Conversely, a highly conservative system may appear reliable by
+refusing too often. Neither behaviour is captured adequately by a single
+accuracy score.
+
+This paper investigates a different systems perspective: LLM behaviour can be
+governed at runtime by making key decision variables explicit and using them to
+control execution. We refer to this broader design perspective as Governed
+Runtime Intelligence and present OtiLLM as a concrete implementation of that
+idea.
+
+### 1.2 OtiLLM as a governed runtime
+
+OtiLLM is designed as a runtime layer around a common LLM backend rather than
+as a replacement foundation model. The runtime receives a query, evaluates
+policy constraints, retrieves or receives evidence, estimates evidence
+sufficiency, derives a confidence signal, and decides whether to execute,
+defer, or refuse. The system also records structured traces and supports
+bounded memory-write decisions.
+
+The central design principle is that governance variables should be represented
+as first-class runtime state. Evidence quality, confidence, provenance, policy
+status, and action eligibility are therefore not treated merely as explanatory
+metadata after generation. They influence whether generation occurs.
+
+This framing distinguishes OtiLLM from conventional RAG. Retrieval is one
+component of the runtime, not the complete control strategy. It also
+distinguishes OtiLLM from a simple guardrail, because policy is only one of the
+signals that can affect execution. The runtime is intended to coordinate
+multiple forms of control within a single inference path.
+
+### 1.3 Research problem
+
+The paper addresses the following research problem:
+
+How does an explicit governed runtime affect the reliability profile of a
+common LLM when evidence quality and policy constraints vary?
+
+This question is deliberately narrower than asking whether OtiLLM is the most
+accurate answering system. The study instead examines whether runtime
+governance changes the trade-off among answer coverage, evidence faithfulness,
+reference factuality, unsupported claims, policy compliance, and operational
+cost.
+
+Three empirical questions guide the evaluation:
+
+**RQ1.** Does OtiLLM alter clean-task reliability relative to conventional LLM,
+RAG, self-checking, guardrail, and bounded agentic baselines when the underlying
+generator is held constant?
+
+**RQ2.** Under degraded retrieval evidence, does selective execution improve
+conditional evidence faithfulness or factuality on the items OtiLLM chooses to
+answer?
+
+**RQ3.** How does task-aware policy gating affect refusal correctness, false
+refusals, and unsafe answers when external evidence is not required for the
+task?
+
+### 1.4 Contributions
+
+This paper makes the following contributions.
+
+First, it introduces a runtime-control abstraction in which evidence
+sufficiency, policy state, confidence, provenance, and action eligibility are
+explicitly represented and used to govern LLM execution.
+
+Second, it provides OtiLLM as an executable implementation of this abstraction,
+including evidence retrieval and scoring, evidence-sufficiency gating,
+confidence-aware deferral, policy-aware execution, selective generation,
+bounded memory writing, and structured tracing.
+
+Third, it develops a reproducible evaluation design that holds the foundation
+model fixed across systems and evaluates governance behaviour across clean
+content tasks, retrieval-stress conditions, and policy prompts. The final
+campaign contains 26,000 system-level observations, all traceable to frozen
+per-example outputs and pinned model revisions.
+
+Fourth, it introduces a matched-subset selective evaluation protocol in which
+baseline systems are compared on the exact items OtiLLM chooses to answer, with
+coverage reported jointly with conditional factuality and faithfulness. This
+avoids conflating abstention with answer quality.
+
+Fifth, it provides empirical evidence that runtime governance changes the
+reliability profile of a common LLM. OtiLLM does not dominate on raw clean
+accuracy, but under degraded retrieval it achieves statistically significant
+selective-faithfulness gains over Strong RAG in four of five stress conditions
+and over ReAct in three of five conditions. It also improves selective
+factuality over Standard RAG and ReAct in several conditions, while Strong RAG
+retains an advantage in factuality in multiple settings.
+
+Sixth, it demonstrates policy-aware runtime integration on XSTest. After
+separating policy-only execution from evidence sufficiency, OtiLLM reaches
+90.0% policy correctness and matches a dedicated guardrail baseline on overall
+correctness, false-refusal rate, and unsafe-answer rate.
+
+The contribution is therefore not a claim that OtiLLM universally outperforms
+RAG, agents, or guardrails. It is a systems contribution showing that explicit
+runtime governance can make the interaction among evidence quality, abstention,
+policy, and generation measurable and controllable.
+
+### 1.5 Scope and claim boundary
+
+The present work evaluates OtiLLM Balanced only. Minimal and Full modes are not
+included because they are not yet sufficiently distinct in executable policy
+behaviour. Similarly, the study does not claim to establish learned governance,
+longitudinal memory safety, causal memory effects, or unrestricted agentic tool
+use.
+
+The empirical claims are restricted to the mechanisms directly exercised by
+the evaluation: evidence-aware retrieval, sufficiency gating, confidence-aware
+deferral, policy-aware execution, selective generation, limited memory writing,
+and trace capture. Controlled contradictory and adversarial perturbations are
+used as synthetic stressors and are not presented as complete models of
+real-world misinformation or poisoning.
+
+This bounded claim scope is central to the paper. The goal is not to argue that
+OtiLLM solves trustworthy AI, but to determine whether runtime governance
+provides a useful systems mechanism for controlling LLM behaviour under
+uncertain evidence and policy constraints.
+
+### 1.6 Paper organisation
+
+The remainder of the paper is organised as follows. Section 2 reviews related
+work on retrieval-augmented generation, self-verification, guardrails, agentic
+orchestration, selective prediction, and runtime governance. Section 3 presents
+the OtiLLM architecture and governed runtime abstraction. Section 4 describes
+the reproducible experimental methodology. Section 5 reports the regenerated
+evaluation results. Section 6 discusses the governance–utility trade-off,
+limitations, and implications. The final section summarises the contribution
+and outlines future work.
+
+
+## 2. Related Work
+
+### 2.1 Retrieval-augmented generation and adaptive retrieval
+
+Retrieval-augmented generation (RAG) combines parametric language-model
+knowledge with external non-parametric evidence and has become a standard
+approach for knowledge-intensive generation (Lewis et al., 2020). Its central
+advantage is that model output can be conditioned on retrievable evidence
+rather than relying exclusively on parameters learned during pre-training.
+This improves knowledge updating and can provide provenance for generated
+answers.
+
+However, fixed retrieval alone does not determine whether retrieved evidence is
+sufficient, contradictory, stale, or otherwise unsuitable for generation.
+Subsequent work has therefore explored more adaptive forms of retrieval and
+reflection. Self-RAG, for example, learns when to retrieve and uses
+self-reflection signals to critique retrieved passages and generated responses
+(Asai et al., 2024). These approaches show that retrieval itself can be made
+conditional rather than indiscriminate.
+
+OtiLLM is related to this line of work but addresses a different control level.
+It does not claim a new retrieval model. Instead, retrieval is one signal in a
+broader runtime decision process that can execute, defer, or refuse generation.
+The present evaluation therefore asks not only whether evidence can be
+retrieved, but whether the runtime should permit generation given the evidence
+state.
+
+### 2.2 Reasoning, acting, and agentic orchestration
+
+ReAct integrates reasoning and acting by interleaving model-generated reasoning
+with actions that query external environments or knowledge sources
+(Yao et al., 2023). More broadly, agentic LLM systems increasingly combine
+planning, tools, retrieval, memory, and iterative control.
+
+This literature is relevant to OtiLLM because both approaches move beyond a
+single prompt-to-response interaction. The distinction is that OtiLLM's primary
+abstraction is governance rather than open-ended agency. Its publication
+runtime exposes evidence sufficiency, policy decisions, confidence, memory
+write state, and final action as explicit control variables. The bounded ReAct
+baseline in this study is therefore used as an orchestration comparison, not as
+a claim that the experiment reproduces unrestricted autonomous agents.
+
+### 2.3 Guardrails, alignment, and policy control
+
+LLM guardrails seek to constrain model behaviour at the input, output, or
+system level. Recent surveys describe guardrails as a broad class of
+safeguarding mechanisms for risks including harmful content, privacy,
+hallucination, bias, and adversarial behaviour (Dong et al., 2024).
+Constitutional AI similarly demonstrates that explicit principles can be used
+to critique, revise, and train model behaviour toward safer outputs
+(Bai et al., 2022).
+
+These approaches establish the importance of policy constraints, but policy
+compliance is only one dimension of runtime reliability. A request may be safe
+yet unsupported by available evidence, or it may have strong evidence but be
+disallowed by policy. OtiLLM therefore separates policy gating from evidence
+sufficiency. The XSTest correction in the present study directly demonstrates
+why this separation matters: missing evidence must not be treated as equivalent
+to policy risk.
+
+The paper does not introduce a new safety classifier. In the corrected XSTest
+path, OtiLLM deliberately uses the same pinned semantic SAFE/UNSAFE
+classification instruction as the dedicated Guardrail baseline. The empirical
+claim is therefore about policy integration within the runtime, not classifier
+novelty.
+
+### 2.4 Selective prediction, abstention, and coverage
+
+Selective prediction studies when a model should abstain rather than return a
+potentially unreliable prediction. In selective question answering, the
+objective is to maximise coverage subject to an acceptable error rate, making
+abstention a first-class decision rather than a failure mode
+(Kamath, Jia, and Liang, 2020).
+
+This perspective is central to the present study. OtiLLM is intentionally
+selective: evidence or confidence below threshold can produce deferral rather
+than generation. Consequently, answer quality is reported jointly with
+coverage. The selective stress analysis further compares baselines on the exact
+subset of items OtiLLM answers, avoiding the misleading comparison between a
+selective system's conditional quality and a non-selective system's
+unconditional average.
+
+OtiLLM extends the selective-prediction perspective by coupling abstention to
+multiple runtime signals, including evidence sufficiency and policy state,
+rather than treating abstention as a standalone confidence-calibration problem.
+
+### 2.5 Faithfulness, factuality, and evidence-grounded generation
+
+A recurring problem in LLM evaluation is the tendency to conflate factuality
+with faithfulness. A response may be factually correct relative to a reference
+while being unsupported by the evidence presented to the model. Conversely, a
+strictly evidence-grounded response may be faithful but incomplete if the
+retrieved context is insufficient.
+
+The present work therefore separates reference factuality from evidence
+faithfulness. This separation is especially important under contradictory,
+incomplete, or stale evidence, where a model's parametric knowledge may produce
+a correct answer that is not justified by the current evidence state. OtiLLM's
+runtime objective is not simply to maximise reference agreement, but to control
+whether generation is justified by the evidence available at inference time.
+
+### 2.6 Memory and persistent LLM systems
+
+Persistent memory is increasingly used to preserve user context, task state,
+and prior outputs across interactions. While memory can improve continuity, it
+also introduces governance questions concerning stale information,
+contradictions, privacy, and unsafe persistence.
+
+OtiLLM includes bounded memory-write gating, but the present paper does not
+claim to have established longitudinal memory safety or long-term memory
+benefits empirically. Governed Cognitive Memory and more advanced causal or
+persistent memory mechanisms remain architectural directions rather than
+validated contributions in this study. This boundary is maintained throughout
+the evaluation.
+
+### 2.7 Positioning of the present work
+
+The closest neighbouring approaches address individual parts of the problem:
+RAG provides external evidence; adaptive RAG decides when to retrieve;
+ReAct coordinates reasoning and action; guardrails constrain unsafe behaviour;
+and selective prediction formalises abstention. OtiLLM's contribution is to
+place several of these signals inside a single runtime control loop and make
+the final execution decision explicit.
+
+The paper therefore positions OtiLLM as a systems abstraction for governed
+inference. Its novelty claim is not that each underlying mechanism is new in
+isolation, nor that the current implementation dominates specialised methods.
+The contribution is the integration of evidence state, policy state,
+confidence, selective execution, bounded memory persistence, and structured
+trace capture into an auditable runtime decision process evaluated under a
+common model backend.
+
+## 3. OtiLLM Architecture and Governed Runtime Model
+
+### 3.1 Design objective
+
+OtiLLM is designed around a simple premise: generation should be an outcome of
+runtime control rather than the default response to every input. The runtime
+therefore represents and evaluates intermediate state before invoking the
+generator.
+
+For content tasks, the publication implementation follows the control path:
+
+[
+q \rightarrow P(q) \rightarrow R(q,E) \rightarrow S(E_q)
+\rightarrow C(S,P) \rightarrow A \rightarrow G(q,E_q)
+]
+
+where (q) is the query, (P) is the policy decision, (R) is evidence
+retrieval over candidate evidence (E), (S) is evidence sufficiency,
+(C) is the runtime confidence signal, (A) is the selected action, and
+(G) is generation when execution is permitted.
+
+Generation is therefore conditional on policy, evidence, and confidence rather
+than being unconditionally invoked.
+
+### 3.2 Runtime state
+
+The publication runtime records the following observable state:
+
+- query;
+- policy decision and policy score;
+- retrieved source identifiers;
+- retrieval scores;
+- evidence-sufficiency score;
+- confidence score;
+- selected action;
+- memory-write decision; and
+- trace notes describing the control path.
+
+This state is retained in a structured runtime trace. The trace is operational
+rather than a hidden chain-of-thought representation: it records system events,
+scores, and actions required for auditability without exposing private internal
+reasoning.
+
+### 3.3 Policy layer
+
+The first runtime stage evaluates whether a request is permitted. For content
+tasks, a failed policy check produces a blocking action before retrieval or
+generation.
+
+Policy-only tasks use a separate task-aware route. Following the XSTest
+diagnostic correction, these tasks are not required to pass an external
+evidence-sufficiency threshold. Instead, the runtime applies the static policy
+check followed by a semantic SAFE/UNSAFE classifier. A permitted request can
+then execute directly; a disallowed request is refused.
+
+This separation prevents two semantically different causes of non-execution
+from being conflated:
+
+[
+\text{policy risk} \neq \text{evidence insufficiency}.
+]
+
+### 3.4 Evidence retrieval and scoring
+
+For content tasks, evidence is retrieved from the candidate evidence made
+available by the common evaluation harness. Each evidence object contains
+content, source information, metadata, timestamp, and a trust score. Retrieval
+produces scored evidence objects that can incorporate semantic, keyword,
+temporal, graph, provenance, and final retrieval scores.
+
+The paper does not claim a new state-of-the-art retriever. The purpose of the
+retrieval layer in the publication experiment is to provide the runtime with an
+explicit evidence state on which governance decisions can operate.
+
+### 3.5 Evidence sufficiency
+
+After retrieval, the runtime computes an evidence-sufficiency score. This score
+is used as a gate rather than merely as an explanatory statistic.
+
+Let (s_e) denote evidence sufficiency and (	au_e) the configured evidence
+threshold. The publication controller implements:
+
+[
+s_e < 	au_e \Rightarrow A = \text{defer/refine}.
+]
+
+When this condition holds, generation is not invoked. The runtime returns a
+bounded response indicating that available evidence is insufficient.
+
+This mechanism is the principal source of OtiLLM's selective behaviour in the
+content experiments.
+
+### 3.6 Confidence gating
+
+The publication controller derives confidence from evidence sufficiency and
+policy posture. In the current implementation,
+
+[
+c = \min\left(1, 0.65s_e + 0.35s_p\right),
+]
+
+where (s_e) is evidence sufficiency and (s_p) is the policy score.
+
+If (c < 	au_c), where (	au_c) is the configured confidence threshold,
+the runtime defers with a low-confidence action rather than invoking the
+generator.
+
+This equation is an explicit implementation rule in the evaluated controller;
+it should not be interpreted as a learned or theoretically optimal confidence
+model.
+
+### 3.7 Action selection
+
+The experimentally established content-task action set in the publication
+runtime is bounded to:
+
+- BLOCK;
+- REFINE_OR_DEFER;
+- DEFER_LOW_CONFIDENCE; and
+- EXECUTE.
+
+For policy-only tasks, REFUSE is additionally used after semantic policy
+classification.
+
+These actions are deliberately narrower than the broader OtiLLM architectural
+vision. Clarification, escalation, forgetting, full retrieval reconsideration,
+and learned action selection remain outside the validated publication path.
+
+### 3.8 Generation
+
+When policy, evidence, and confidence gates permit execution, the common
+Qwen3-8B backend generates an answer using the selected evidence. The generator
+instruction requires use of supplied evidence and asks the model to acknowledge
+insufficient or conflicting evidence rather than invent support.
+
+Because the same pinned model revision is used by OtiLLM and the model-based
+baselines, experimental differences are attributable primarily to orchestration
+and runtime-control choices rather than model scale or pre-training.
+
+### 3.9 Bounded memory writing
+
+After a successful content generation, OtiLLM may write the answer to memory
+subject to confidence and policy constraints. The current study records the
+memory-write decision but does not evaluate long-term memory quality across
+sessions.
+
+Accordingly, bounded memory writing is part of the executable runtime, whereas
+longitudinal Governed Cognitive Memory remains outside the paper's established
+empirical claims.
+
+### 3.10 Structured runtime trace
+
+Each OtiLLM request produces a structured trace containing policy outcome,
+retrieval metadata, evidence sufficiency, confidence, action, and memory-write
+state. This trace supports auditability and allows the evaluation harness to
+measure common trace completeness across systems.
+
+The trace should not be described as proof of correctness. It is an
+instrumentation mechanism that records which runtime controls were applied and
+which action resulted.
+
+### 3.11 Relationship to the broader OtiLLM architecture
+
+The repository contains a broader experimental runtime including uncertainty
+estimation, Retrieval Reconsideration Dynamics, Cognitive Utility Optimisation,
+Governed Memory, and an Explainable Runtime Reasoning Graph. These components
+represent the larger architectural direction of OtiLLM.
+
+However, the JAIR publication distinguishes architecture from validated
+implementation. In the current experiment:
+
+- evidence retrieval/scoring is evaluated;
+- evidence sufficiency is evaluated;
+- policy gating is evaluated;
+- confidence gating is evaluated;
+- execute/refuse/defer behaviour is evaluated;
+- bounded memory-write gating is implemented but only lightly exercised; and
+- structured operational tracing is evaluated.
+
+By contrast, full failure-specific retrieval reconsideration, formal cognitive
+utility optimisation, clarification/escalation/forget actions, longitudinal
+memory governance, learned policies, and distinct Minimal/Balanced/Full
+controller variants are not presented as empirically established.
+
+### 3.12 Governed Runtime Intelligence as an abstraction
+
+The broader abstraction underlying OtiLLM can be represented as a state-action
+system:
+
+[
+x_t = (q_t, e_t, p_t, c_t, m_t, \pi_t),
+]
+
+where (q_t) is the current query, (e_t) is evidence state, (p_t) is
+policy state, (c_t) is confidence, (m_t) is memory state, and (pi_t)
+denotes provenance and trace state.
+
+A governed runtime maps this state to an action:
+
+[
+a_t = \Gamma(x_t),
+]
+
+where (Gamma) is the runtime control policy and (a_t) may represent
+execution, deferral, refusal, retrieval reconsideration, clarification, or
+another governed action.
+
+The present OtiLLM implementation instantiates a bounded subset of this action
+space. The value of the abstraction is therefore not dependent on every action
+being implemented in the current release. It provides a systems framework in
+which evidence, safety, confidence, memory, and provenance can influence
+execution through explicit state rather than remaining disconnected auxiliary
+modules.
+
+### 3.13 Architectural claim boundary
+
+The paper deliberately avoids claiming that OtiLLM is the first system to use
+retrieval, abstention, guardrails, memory, or traces. Each of these mechanisms
+has substantial prior literature. Nor does it claim that the current runtime
+solves trustworthy AI.
+
+The architectural contribution is instead the governed-runtime formulation:
+the final model invocation is treated as a controlled action conditioned on
+multiple explicit runtime states. The empirical sections then test whether
+this formulation produces measurable differences in coverage, faithfulness,
+factuality, policy behaviour, and operational execution under a common
+foundation model.
+
+
+## 4. Methodology
+
+### 4.1 Research design
+
+This study evaluates OtiLLM as a governed runtime layer rather than as a new
+foundation model. The experimental design therefore holds the underlying
+language model fixed and varies the orchestration and control strategy. The
+primary objective is to determine whether explicit runtime control over
+evidence sufficiency, policy state, confidence, abstention, and trace
+generation changes system behaviour under clean and degraded evidence
+conditions.
+
+The evaluation is organised around four principles. First, all reported
+performance values must be derivable from per-example raw outputs. Second,
+clean and stress conditions must differ through explicit, deterministic
+evidence transformations. Third, correctness, factuality, evidence
+faithfulness, unsupported-claim rate, refusal behaviour, coverage, latency,
+and model-use cost are reported separately rather than collapsed into a
+single trust score. Fourth, statistical comparisons are paired on benchmark
+items so that differences reflect system behaviour on the same underlying
+examples.
+
+OtiLLM Balanced is the only OtiLLM configuration included in the primary
+comparison. Minimal and Full modes are excluded because their controller
+policies are not yet sufficiently distinct in executable code to justify
+treating them as independent experimental systems.
+
+### 4.2 Experimental systems
+
+Eight systems are evaluated in the clean benchmark:
+
+1. Direct LLM;
+2. Prompt Chain;
+3. Standard RAG;
+4. Strong RAG;
+5. Self-Checking LLM;
+6. Guardrail LLM;
+7. a bounded ReAct-style agent; and
+8. OtiLLM Balanced.
+
+For retrieval-stress testing, only the four systems that consume the common
+evidence context are evaluated: Standard RAG, Strong RAG, ReAct, and OtiLLM
+Balanced.
+
+All enabled LLM-based systems use the same pinned generator backend:
+Qwen/Qwen3-8B, revision
+`a0809d1efaf104a46bbc2acaecd69617e9696312`. Generation is performed in
+non-thinking mode using deterministic greedy decoding, temperature 0.0, and a
+maximum generation length of 256 tokens. Holding the generator constant is
+essential because the paper evaluates the effect of runtime orchestration and
+governance rather than differences in foundation-model capability.
+
+The comparison systems are implemented through a common evaluation harness.
+Direct LLM performs a single unconstrained model call. Prompt Chain produces a
+draft and a second-pass revision. Standard RAG conditions generation on the
+common candidate evidence supplied by the harness. Strong RAG additionally
+orders candidate evidence by retrieval or trust score before generation.
+Self-Checking LLM generates a draft followed by an explicit correction pass.
+Guardrail LLM performs a separate SAFE/UNSAFE classification before answer
+generation. ReAct uses a bounded planning step followed by answer generation;
+it is not described as a full open-world iterative retrieval agent because the
+current implementation does not perform unrestricted external tool use or an
+independent second search.
+
+### 4.3 OtiLLM execution path
+
+OtiLLM receives the same underlying model backend as the baselines but routes
+queries through an explicit runtime controller. For content tasks, the
+controller applies policy evaluation, retrieves candidate evidence, estimates
+evidence sufficiency, derives a confidence signal, and either executes
+generation or defers when the evidence or confidence threshold is not met.
+Successful executions may also trigger a bounded memory-write decision and
+produce a structured runtime trace.
+
+The experimentally established components in this study are therefore:
+evidence retrieval and scoring, evidence-sufficiency gating, policy gating,
+confidence-aware deferral, selective execution, limited memory writing, and
+structured trace generation. More ambitious architectural elements, including
+fully learned control policies, longitudinal governed memory, causal memory
+graphs, full retrieval reconsideration, and formally distinct Minimal and Full
+runtime modes, are not treated as empirically established contributions in the
+present evaluation.
+
+### 4.4 Benchmark construction and frozen manifest
+
+The benchmark manifest was constructed deterministically from canonical public
+datasets using hash-based sampling with seed 42. The final frozen manifest
+contains 1,250 records:
+
+- TruthfulQA: 200;
+- FEVER: 200;
+- HotpotQA: 200;
+- Natural Questions: 200; and
+- XSTest: 450, comprising 250 safe and 200 unsafe contrast prompts.
+
+The corrected frozen manifest has SHA-256
+`62bd9c4b6bf8810a93a2065683f4d29a3f946246a45f2b1be98c6459e18b329c`.
+The ordered item-ID checksum is
+`ed9aac76d0529f736dcfe8265374d3919169f5102d7f6d6d76f1207f6e162c85`.
+
+TruthfulQA is treated as a closed-book or evidence-availability edge case
+because it does not provide benchmark-native evidence in the same form as
+FEVER, HotpotQA, and Natural Questions. XSTest is evaluated separately as a
+policy benchmark rather than being included in content macro averages.
+
+### 4.5 Clean evaluation
+
+The clean evaluation executes all eight systems on all 1,250 frozen benchmark
+items, producing 10,000 observations. Each system therefore contributes 1,250
+clean observations. The merged clean result contains exactly 10,000 unique
+system-item-condition keys with no duplicates.
+
+The clean merged result is frozen with SHA-256
+`61912c5fbbbefc57e3d17a6eee59addeabf7e4ae032c9e50d186896cc7d58479`.
+
+Content macro averages are computed with equal weight across TruthfulQA,
+FEVER, HotpotQA, and Natural Questions. XSTest is excluded from these content
+macro averages and is analysed separately using policy metrics.
+
+### 4.6 Retrieval-stress evaluation
+
+Robustness is evaluated under five degraded-evidence conditions:
+
+- noisy;
+- contradictory;
+- incomplete;
+- adversarial; and
+- stale.
+
+The clean condition is taken from the clean evaluation rather than duplicated
+inside the stress run. Stress testing is restricted to the 800 content items
+from TruthfulQA, FEVER, HotpotQA, and Natural Questions and to the four
+retrieval-consuming systems. This yields 16,000 stress observations:
+800 items × 5 perturbation conditions × 4 systems.
+
+Each transformed evidence set is archived in the corresponding raw result row,
+so subsequent faithfulness scoring is performed against the exact evidence
+that the system actually received.
+
+Contradictory and adversarial conditions are controlled synthetic stressors.
+They are used to test sensitivity to structured evidence corruption and are
+not presented as complete models of real-world misinformation, retrieval
+poisoning, or malicious knowledge-base compromise.
+
+The merged stress result contains 16,000 rows, 16,000 unique keys, and zero
+duplicates. Its SHA-256 is
+`6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098`.
+
+### 4.7 Cloud execution environment and long-running experimental procedure
+
+The final publication experiments were executed in a Google Colab cloud
+environment backed by an NVIDIA L4 GPU. The complete experimental campaign was
+performed over approximately 48 hours of cumulative execution and validation
+rather than as a single uninterrupted notebook run.
+
+The long-running workflow was divided into deterministic stages so that
+transient notebook disconnections did not invalidate completed work. Raw
+outputs and intermediate artefacts were checkpointed to persistent Google
+Drive storage after each stage. The workflow comprised:
+
+1. frozen-manifest validation;
+2. clean-generation shards;
+3. clean shard merge and integrity verification;
+4. retrieval-stress generation shards;
+5. stress shard merge and integrity verification;
+6. independent NLI scoring of clean outputs;
+7. independent NLI scoring of stress outputs;
+8. aggregate metric calculation;
+9. selective paired statistical validation;
+10. XSTest policy analysis; and
+11. generation of publication tables and figures.
+
+Generation and scoring were intentionally separated. This prevents the model
+under evaluation from serving as its own semantic judge and allows generated
+outputs to be frozen before downstream evaluation.
+
+Deterministic sharding was used to make long runs resumable. A shard was only
+admitted to downstream analysis after row counts, expected system/dataset
+balance, unique keys, and duplicate counts had been checked. Merged artefacts
+were subsequently frozen by checksum.
+
+The use of an L4 GPU is reported solely as part of experimental
+reproducibility. No claim of algorithmic superiority is inferred from the
+hardware configuration or wall-clock duration.
+
+### 4.8 Independent factuality and faithfulness evaluation
+
+Generated outputs are evaluated after generation using the independent NLI
+model MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli, revision
+`6f5cf0a2b59cabb106aca4c287eed12e357e90eb`, with an entailment threshold
+of 0.5.
+
+The evaluator is used to derive two distinct semantic outcomes:
+
+- reference factuality: whether the generated claim is supported by the
+  benchmark reference; and
+- evidence faithfulness: whether the generated claim is supported by the exact
+  evidence exposed to the system.
+
+Unsupported-claim rate is reported separately rather than inferred from
+factuality alone.
+
+The clean NLI-scored file contains 10,000 unique observations and has SHA-256
+`f22c3514b651d413b972125e4a577e6bb7733aa006deb2f3783852532b3b7f5c`.
+The stress NLI-scored file contains 16,000 unique observations and has SHA-256
+`ae678a2fdb381b0ebfaff06b3e81bb68cbdcb2d9d4bcf39fcb4f8e250bcec7c5`.
+
+The NLI evaluator is treated as an automated measurement instrument, not as
+ground truth. A stratified double-adjudicated human validation stage is
+therefore retained as part of the final evaluation protocol.
+
+### 4.9 Coverage and selective evaluation
+
+OtiLLM is a selective system: it can execute, defer, or refuse. Consequently,
+conditional answer quality cannot be interpreted without reporting answer
+coverage.
+
+For each stress condition, OtiLLM coverage is first measured over the full
+condition. Selective factuality and selective faithfulness are then computed
+only over items OtiLLM chose to answer. Baseline systems are compared on the
+exact same item IDs, avoiding the unfair comparison that would arise if
+OtiLLM's answered subset were compared with baseline averages over all items.
+
+This matched-subset design is particularly important because Standard RAG,
+Strong RAG, and ReAct maintain full coverage in the stress experiments,
+whereas OtiLLM intentionally abstains under insufficient evidence.
+
+### 4.10 Statistical analysis
+
+The benchmark item is the primary paired statistical unit.
+
+For continuous per-item metrics such as factuality and faithfulness, system
+differences are evaluated using paired bootstrap confidence intervals with
+5,000 resamples and paired permutation tests with 10,000 permutations.
+Holm's procedure is applied to control the family-wise error rate across the
+planned multiple comparisons.
+
+For XSTest's binary policy outcomes, paired McNemar exact tests are used, with
+Holm correction applied within metric families.
+
+The main policy outcomes are:
+
+- overall refusal correctness;
+- false-refusal rate on safe prompts; and
+- unsafe-answer rate on unsafe prompts.
+
+Effect direction, confidence intervals, adjusted p-values, matched sample size,
+and OtiLLM coverage are reported together. Statistical significance is not used
+to mask practically unfavourable trade-offs such as low coverage.
+
+### 4.11 XSTest policy-path correction and disclosure
+
+The first frozen XSTest run revealed a structural implementation confound:
+policy-only prompts were incorrectly routed through the evidence-sufficiency
+gate used for content QA. Because XSTest does not naturally supply external
+evidence, this caused blanket abstention: all 250 safe prompts and all 200
+unsafe prompts were withheld.
+
+The issue was diagnosed before corrected XSTest results were generated. The
+runtime was then changed so that policy-only tasks are handled by a separate
+execution path. The correction:
+
+1. passes the task type as runtime context;
+2. applies the static runtime policy first;
+3. applies a semantic SAFE/UNSAFE classifier using the same pinned model and
+   the same classification instruction as the Guardrail baseline;
+4. permits safe policy-only prompts to execute without external evidence;
+5. refuses unsafe prompts; and
+6. leaves all content QA and retrieval-stress execution unchanged.
+
+No XSTest gold policy label is exposed to the runtime. Only the affected 450
+OtiLLM XSTest observations were regenerated. All clean content outputs,
+retrieval-stress outputs, and their corresponding NLI scores remained
+unchanged.
+
+The original diagnostic failure is retained in the experimental record rather
+than silently discarded. The corrected XSTest result is therefore interpreted
+as validation of task-aware separation between policy governance and evidence
+governance, not as post-hoc optimisation against benchmark labels.
+
+### 4.12 Reproducibility and artefact integrity
+
+The evaluation pipeline records both configuration identity and result
+integrity. The principal frozen artefacts are:
+
+| Artefact | Size / count | Integrity value |
+|---|---:|---|
+| Frozen benchmark manifest | 1,250 items | SHA-256 62bd9c4b6bf8810a93a2065683f4d29a3f946246a45f2b1be98c6459e18b329c |
+| Clean raw results | 10,000 rows | SHA-256 61912c5fbbbefc57e3d17a6eee59addeabf7e4ae032c9e50d186896cc7d58479 |
+| Stress raw results | 16,000 rows | SHA-256 6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098 |
+| Clean NLI-scored results | 10,000 rows | SHA-256 f22c3514b651d413b972125e4a577e6bb7733aa006deb2f3783852532b3b7f5c |
+| Stress NLI-scored results | 16,000 rows | SHA-256 ae678a2fdb381b0ebfaff06b3e81bb68cbdcb2d9d4bcf39fcb4f8e250bcec7c5 |
+
+Together, these controls make it possible to distinguish planned evaluation
+choices from later analysis, verify that all reported aggregate values are
+traceable to per-example outputs, and reproduce the primary experimental
+pipeline from frozen inputs and pinned model revisions.
+
+### 4.13 Threats to validity
+
+Several threats to validity remain. The common evidence pool isolates runtime
+behaviour but does not measure unrestricted open-world retrieval quality.
+Controlled synthetic contradictory and adversarial perturbations may not
+capture the complexity of real-world source conflict. Automated NLI scoring may
+misjudge nuanced semantic support. TruthfulQA does not expose benchmark-native
+evidence in the same way as the other content datasets. The shared policy
+classifier used by OtiLLM and the Guardrail baseline means XSTest evaluates
+policy integration rather than classifier novelty. Finally, the current study
+does not establish the longitudinal behaviour of governed memory, causal
+reasoning, or learned adaptive policies.
+
+These limitations bound the paper's claims. The methodology is designed to
+support conclusions about runtime governance, selective execution, and
+evidence-aware control under the tested conditions, not universal superiority
+or complete trustworthy-AI coverage.
+
+
+## 5. Results
+
+### 5.1 Evaluation overview
+
+The regenerated evaluation comprises 10,000 clean observations and 16,000
+retrieval-stress observations, for a total of 26,000 system-level outputs.
+All headline comparisons use the same pinned Qwen3-8B backend. Clean content
+results are macro-averaged with equal weight across TruthfulQA, FEVER,
+HotpotQA, and Natural Questions. XSTest is reported separately as a policy
+benchmark. Retrieval-stress analysis covers noisy, contradictory, incomplete,
+adversarial, and stale evidence. Selective comparisons are paired on the exact
+subset of benchmark items for which OtiLLM Balanced chose to answer.
+
+### 5.2 Clean content performance
+
+On clean content benchmarks, OtiLLM Balanced obtained a macro token F1 of
+0.139, factuality of 0.230, evidence faithfulness of 0.414, an unsupported-claim
+rate of 0.586, coverage of 0.597, and mean latency of 2.713 s. Relative to the
+Direct LLM baseline, clean faithfulness was 29.4% higher and the unsupported-
+claim rate was 13.8% lower. These gains were accompanied by materially lower
+coverage: OtiLLM answered approximately 59.7% of clean content cases, whereas
+most non-selective baselines answered all cases.
+
+The clean results therefore do not support a universal accuracy advantage.
+Direct LLM and ReAct achieved higher token F1, while Strong RAG achieved higher
+reference factuality. The clean evaluation instead indicates a governance-
+utility trade-off: OtiLLM sacrifices answer coverage and some raw answer
+accuracy in exchange for stronger evidence alignment than several non-governed
+baselines.
+
+### 5.3 Selective robustness under retrieval stress
+
+The effect of selective execution became clearer under degraded evidence.
+OtiLLM reduced coverage in response to retrieval quality: coverage was 0.374
+under noisy evidence, 0.730 under contradictory evidence, 0.263 under
+incomplete evidence, 0.596 under adversarial evidence, and 0.261 under stale
+evidence. By contrast, Standard RAG, Strong RAG, and ReAct answered all stress
+cases. Consequently, stress comparisons were evaluated on matched items that
+OtiLLM actually answered, with paired bootstrap confidence intervals and
+paired permutation tests corrected using Holm's procedure.
+
+#### 5.3.1 Evidence faithfulness
+
+OtiLLM achieved statistically significant selective-faithfulness gains over
+Strong RAG in four of five stress conditions. The mean paired improvement was
+0.0628 under noisy evidence (95% CI [0.0394, 0.0862], Holm-adjusted
+p=0.00150), 0.0531 under contradictory evidence (95% CI [0.0320, 0.0741],
+p=0.00150), 0.1045 under incomplete evidence (95% CI [0.0750, 0.1348],
+p=0.00150), and 0.1168 under stale evidence (95% CI [0.0863, 0.1493],
+p=0.00150). The adversarial comparison against Strong RAG was not significant.
+
+Against ReAct, OtiLLM showed significant selective-faithfulness improvements
+under noisy evidence (Δ=0.0433, 95% CI [0.0133, 0.0726], Holm-adjusted
+p=0.0468), contradictory evidence (Δ=0.0409, 95% CI [0.0184, 0.0621],
+p=0.00220), and stale evidence (Δ=0.0589, 95% CI [0.0271, 0.0922],
+p=0.00700). Improvements under incomplete and adversarial evidence did not
+remain significant after multiple-comparison correction.
+
+OtiLLM did not significantly exceed Standard RAG in selective faithfulness
+after Holm correction. This is important: the results support stronger
+faithfulness than Strong RAG and ReAct in several degraded-evidence settings,
+but do not establish OtiLLM as uniformly more faithful than every RAG baseline.
+
+#### 5.3.2 Reference factuality
+
+Selective factuality followed a different pattern. OtiLLM significantly
+outperformed Standard RAG under noisy evidence (Δ=0.1113, 95% CI
+[0.0622, 0.1619], Holm-adjusted p=0.00150), contradictory evidence
+(Δ=0.0579, 95% CI [0.0222, 0.0955], p=0.0100), incomplete evidence
+(Δ=0.1379, 95% CI [0.0801, 0.1962], p=0.00150), and adversarial evidence
+(Δ=0.0941, 95% CI [0.0598, 0.1297], p=0.00150). The stale-evidence
+comparison was not significant.
+
+Relative to ReAct, OtiLLM produced significantly higher factuality under
+contradictory evidence (Δ=0.0902, 95% CI [0.0500, 0.1297],
+Holm-adjusted p=0.00150), incomplete evidence (Δ=0.1436, 95% CI
+[0.0871, 0.2001], p=0.00150), and adversarial evidence (Δ=0.0871,
+95% CI [0.0516, 0.1230], p=0.00150). The noisy and stale comparisons were
+not significant.
+
+Strong RAG remained the strongest factuality baseline in several conditions.
+OtiLLM was significantly lower than Strong RAG under noisy evidence
+(Δ=-0.1871), contradictory evidence (Δ=-0.1555), incomplete evidence
+(Δ=-0.1190), and stale evidence (Δ=-0.2653), all after Holm correction.
+The adversarial difference did not remain significant. Thus, the evidence
+does not support a claim that governed selective execution maximises factual
+accuracy; rather, it changes the reliability profile by combining abstention
+with stronger evidence alignment in selected conditions.
+
+### 5.4 Policy-governance evaluation on XSTest
+
+The initial XSTest run exposed an architectural confound: evidence-free policy
+prompts were routed through OtiLLM's evidence-sufficiency gate, causing blanket
+abstention. This behaviour was diagnosed before revised XSTest results were
+generated. The runtime was then corrected so that policy-only tasks first
+undergo static policy checking and semantic SAFE/UNSAFE classification, without
+requiring external evidence. No XSTest gold label was exposed to the runtime,
+and content QA and retrieval-stress execution remained unchanged.
+
+After this correction, OtiLLM achieved 0.900 overall policy correctness
+(405/450). On the 250 safe prompts, it answered 208 and falsely refused 42,
+giving a safe-prompt accuracy of 0.832 and a false-refusal rate of 0.168. On
+the 200 unsafe prompts, it correctly refused 197 and answered 3, yielding an
+unsafe-prompt accuracy of 0.985 and an unsafe-answer rate of 0.015.
+
+Compared with the non-policy-aware baselines, which each achieved 0.5556
+overall policy correctness, OtiLLM's advantage was significant
+(Holm-adjusted p=2.42×10^-24). OtiLLM matched the dedicated Guardrail baseline
+exactly on overall policy correctness, false-refusal rate, and unsafe-answer
+rate (McNemar p=1.0 for all three comparisons). Because the corrected OtiLLM
+policy path intentionally uses the same pinned backend and classification
+instruction as the Guardrail baseline, this result should be interpreted as
+evidence that the runtime successfully integrates policy-aware execution, not
+as evidence that its semantic classifier is superior to the dedicated
+guardrail.
+
+### 5.5 Operational trade-offs
+
+OtiLLM's clean mean latency was 2.713 s. This was substantially lower than the
+two-call Prompt Chain and Self-Checking baselines and lower than ReAct and
+Strong RAG, but slightly higher than the Direct LLM baseline. The runtime also
+reduced model invocation frequency by abstaining when evidence or confidence
+thresholds were not met. Operational comparisons should therefore be read
+jointly with coverage: lower invocation cost partly reflects deliberate
+non-execution rather than uniformly faster generation.
+
+### 5.6 Summary of empirical findings
+
+The regenerated experiments support four conclusions. First, OtiLLM does not
+dominate conventional baselines on raw clean-task accuracy. Second, under
+retrieval degradation it exhibits a clear selective-execution behaviour,
+reducing coverage as evidence quality deteriorates. Third, on the subset of
+items it chooses to answer, OtiLLM achieves statistically significant
+faithfulness gains over Strong RAG in four of five stress conditions and over
+ReAct in three of five conditions, while also improving factuality over
+Standard RAG and ReAct in several conditions. Fourth, after separating
+policy-only control from evidence sufficiency, OtiLLM matches a dedicated
+guardrail on XSTest policy behaviour while substantially outperforming
+non-policy-aware systems.
+
+Taken together, these results support OtiLLM as a governed runtime that exposes
+and controls the trade-off between answer coverage, evidence support, factual
+accuracy, and policy compliance. They do not support a claim of universal
+superiority over RAG or other LLM orchestration strategies.
+
+
+## 6. Discussion
+
+### 6.1 What the results show
+
+The regenerated evaluation does not support the interpretation that OtiLLM is a universally more accurate answering system than conventional LLM, RAG, or agentic baselines. Instead, the results support a narrower and more methodologically defensible conclusion: OtiLLM changes the execution policy of an LLM system so that evidence quality, confidence, and policy state influence whether generation should proceed at all.
+
+This distinction is visible in both the clean and stress evaluations. On clean content benchmarks, OtiLLM Balanced achieved lower token F1 and lower reference factuality than several baselines, while answering only 59.7% of content cases. The system therefore gives up answer coverage and some raw accuracy. At the same time, its clean evidence faithfulness exceeded that of Direct LLM and Guardrail LLM and was comparable to ReAct, indicating that the runtime is not simply refusing indiscriminately but is changing the relationship between available evidence and model output.
+
+The stress evaluation makes the trade-off more explicit. When evidence became noisy, incomplete, contradictory, adversarial, or stale, OtiLLM reduced coverage rather than maintaining a fixed 100% answer rate. This behaviour differs fundamentally from Standard RAG, Strong RAG, and ReAct, which continued to produce answers on all stress cases. The selective statistical analysis shows that this abstention policy is associated with statistically significant gains in conditional evidence faithfulness against Strong RAG in four of five stress settings and against ReAct in three of five settings. The same analysis shows that OtiLLM also improves factuality over Standard RAG and ReAct in several conditions, although Strong RAG remains stronger in factuality in multiple settings.
+
+The central empirical contribution is therefore not unconditional performance dominance. It is the demonstration that a governed runtime can expose and actively manage a reliability trade-off that conventional generation pipelines often leave implicit.
+
+### 6.2 Governance–utility trade-off as a runtime property
+
+The results suggest that answer coverage should be treated as a first-class runtime variable rather than an afterthought. Conventional benchmark reporting often rewards systems that answer every question, even when evidence quality is poor. In contrast, OtiLLM makes non-execution an explicit system action. This design changes how performance should be interpreted.
+
+Under incomplete and stale evidence, OtiLLM coverage fell to approximately 26%. Under noisy evidence it was approximately 37%, and under adversarial evidence approximately 60%. These reductions are substantial, but they are not necessarily failures of the runtime. They represent a deliberate control response to evidence conditions that the runtime judged insufficiently reliable. The important question is therefore not only whether a system answers correctly, but whether it should have answered given the evidence state.
+
+This is why unconditional accuracy and selective reliability must be reported together. A system that answers every query may obtain higher aggregate factuality while also exposing users to unsupported generations in low-quality evidence settings. Conversely, a highly conservative system may achieve strong conditional reliability by refusing too often. The useful operating point lies between these extremes. OtiLLM Balanced represents one such operating point, but the current evaluation does not establish it as globally optimal.
+
+The broader implication is that governance should be evaluated as a runtime control problem with multiple objectives: answer utility, evidence support, abstention cost, policy compliance, and operational overhead. This framing is closer to how deployed AI systems are actually used than a single accuracy score.
+
+### 6.3 Why faithfulness and factuality diverge
+
+A key result is the divergence between evidence faithfulness and reference factuality. OtiLLM frequently improves faithfulness without becoming the most factual system. Strong RAG, in particular, remains substantially stronger on factuality in several stress conditions.
+
+This distinction is conceptually important. Factuality asks whether an answer agrees with the benchmark reference. Faithfulness asks whether the answer is supported by the evidence that was actually available to the system. These properties can diverge. A model may produce a factually correct answer from prior parametric knowledge even when the supplied evidence is incomplete, contradictory, or stale. Such an answer may score well on factuality while being weakly grounded in the current evidence context. Conversely, a system that restricts itself to available evidence may be more faithful but less complete or less aligned with the reference answer.
+
+For a governed runtime, faithfulness is particularly important because the runtime is intended to control what the system is justified in saying under a specific evidence state. The results therefore support keeping factuality and faithfulness as separate objectives rather than collapsing them into a single trust score.
+
+At the same time, the factuality disadvantage relative to Strong RAG is a real limitation. Governance should not become a justification for unnecessary abstention or reduced answer quality. Future controller policies should therefore aim to preserve OtiLLM's evidence sensitivity while recovering more of the factual performance achieved by stronger retrieval pipelines.
+
+### 6.4 Comparison with RAG and agentic baselines
+
+The evaluation clarifies the relationship between OtiLLM and RAG. OtiLLM should not be described as a replacement for retrieval-augmented generation. In the current implementation, retrieval is one component within a wider runtime control loop. The empirical results reinforce this distinction.
+
+Standard RAG provides strong evidence faithfulness in several conditions and is not significantly worse than OtiLLM on selective faithfulness after Holm correction. Strong RAG achieves superior factuality in multiple stress settings. These findings show that retrieval quality and evidence ranking remain critical. OtiLLM's contribution lies elsewhere: it adds runtime decisions about whether the retrieved evidence is sufficient, whether confidence is adequate, whether policy permits execution, and whether generation should be deferred.
+
+The comparison with ReAct is similarly instructive. ReAct maintains full coverage and, in this implementation, uses a bounded planning step before final generation. OtiLLM exceeds ReAct in selective faithfulness under noisy, contradictory, and stale evidence, and in factuality under contradictory, incomplete, and adversarial evidence. However, these gains occur with substantially lower coverage. The result is therefore best understood as a difference in control policy rather than a general superiority of one reasoning paradigm over another.
+
+### 6.5 Policy governance and the XSTest correction
+
+The XSTest analysis exposed an implementation issue that was useful diagnostically. In the initial run, policy-only prompts were routed through the same evidence-sufficiency gate used for factual QA. Because XSTest prompts do not naturally provide external evidence, OtiLLM refused every safe prompt as well as every unsafe prompt. This produced perfect unsafe-answer avoidance but unusable safe-prompt coverage.
+
+The correction separated policy-only governance from evidence sufficiency. The runtime now applies static policy checks and a semantic SAFE/UNSAFE classifier without requiring external retrieval evidence for policy-only tasks. After this change, OtiLLM achieved 90.0% policy correctness, with a 16.8% false-refusal rate on safe prompts and a 1.5% unsafe-answer rate on unsafe prompts.
+
+Importantly, OtiLLM matched the dedicated Guardrail baseline exactly on these quantities. This outcome should not be presented as a policy-classification advantage because the corrected OtiLLM policy path intentionally uses the same pinned backend and the same semantic classification instruction as the Guardrail baseline. Instead, the result validates the architectural separation between policy governance and evidence governance within the runtime.
+
+The episode also highlights a broader methodological lesson: governance mechanisms must be evaluated in a task-aware way. A refusal caused by missing evidence is not the same as a refusal caused by policy risk. Treating these as one action obscures failure modes and can make a system appear safer than it actually is.
+
+### 6.6 Operational implications
+
+OtiLLM's clean mean latency was 2.713 s, lower than Prompt Chain, Self-Checking LLM, ReAct, and Strong RAG, but slightly higher than Direct LLM. The runtime also invoked the model less frequently because abstained cases do not proceed to generation.
+
+These operational results should be interpreted carefully. Reduced invocation count and lower average latency are partly consequences of selective non-execution. They do not imply that the OtiLLM generation path itself is always faster. A fair operational interpretation is therefore that runtime governance can reduce unnecessary model execution when evidence is inadequate, potentially lowering computational cost, but at the expense of lower answer coverage.
+
+This trade-off may be attractive in applications where unsupported answers are more costly than deferred responses. Examples include regulated decision support, enterprise knowledge systems, safety-critical analytics, and environments where provenance requirements are explicit. The present experiments, however, do not directly evaluate end-user utility or domain-specific economic cost, so such deployment implications remain hypotheses rather than demonstrated outcomes.
+
+### 6.7 Methodological implications
+
+Several aspects of the evaluation were designed to reduce common sources of overclaiming. All enabled LLM-based systems use the same pinned Qwen3-8B backend. The benchmark manifest is frozen and checksummed. Stress perturbations are archived with the exact evidence shown to each system. Factuality and faithfulness are scored independently. Statistical comparisons use paired benchmark items, paired bootstrap confidence intervals, permutation tests, and Holm correction. XSTest is kept separate from content QA, and content macro averages weight the four benchmarks equally.
+
+These choices matter because OtiLLM is a systems contribution rather than a foundation-model contribution. If different systems used different base models, retrieval corpora, or evaluation subsets, improvements could not be attributed to runtime control. The common-backend design therefore strengthens the interpretation that observed differences arise from orchestration and governance choices.
+
+Nevertheless, automated NLI evaluation is not ground truth. The DeBERTa-based evaluator provides a reproducible independent signal, but its judgments may not fully capture semantic correctness, nuanced support, or answer usefulness. The planned human adjudication stage remains necessary to validate the automated findings.
+
+### 6.8 Limitations
+
+The current study has several limitations.
+
+First, OtiLLM Balanced is the only runtime mode evaluated. Minimal and Full modes were intentionally excluded because the implementation does not yet provide sufficiently distinct controller policies to justify treating them as separate experimental systems.
+
+Second, the policy engine remains relatively simple. The corrected XSTest path demonstrates task-aware policy separation, but the semantic classifier itself is shared with the Guardrail baseline. The present paper therefore evaluates policy integration, not a novel safety classifier.
+
+Third, the contradiction and adversarial evidence perturbations are controlled synthetic stressors. They are useful for causal robustness testing but should not be interpreted as a complete model of real-world misinformation, poisoning, or source conflict.
+
+Fourth, the retrieval setup provides systems with a common candidate evidence pool rather than reproducing a complete open-world retrieval stack. The evaluation therefore isolates runtime and evidence-handling behaviour more cleanly, but does not measure end-to-end search quality over the public web or a production vector database.
+
+Fifth, TruthfulQA does not provide benchmark-native evidence in the same way as FEVER, HotpotQA, and Natural Questions. Results on this benchmark should therefore be interpreted as a closed-book or evidence-availability edge case rather than as a standard retrieval-grounding task.
+
+Sixth, Strong RAG retains a clear factuality advantage in several conditions. This indicates that OtiLLM's evidence-aware abstention policy is not yet sufficient to maximise answer correctness. Better retrieval, reranking, contradiction handling, or adaptive recovery may improve this balance.
+
+Seventh, the study evaluates short-run task performance rather than long-term memory behaviour, multi-session governance, causal memory effects, or persistent policy adaptation. These remain architectural capabilities rather than fully established empirical contributions in the current paper.
+
+Finally, the corrected XSTest run followed an observed diagnostic failure. The correction was documented before revised results were generated, did not expose gold labels to the runtime, and was restricted to the policy-only execution path. Nevertheless, the paper should explicitly disclose this sequence so that readers can distinguish the original implementation defect from the corrected evaluation.
+
+### 6.9 Implications for Governed Runtime Intelligence
+
+The findings support Governed Runtime Intelligence as a systems abstraction rather than as a claim about a new underlying language model. The core idea is that an LLM application should maintain explicit runtime state about evidence, policy, confidence, provenance, and action eligibility, and use that state to decide whether and how generation proceeds.
+
+OtiLLM provides one concrete implementation of this idea. The present experiments establish only a subset of the broader vision: evidence-aware retrieval, evidence-sufficiency gating, confidence-aware deferral, policy-aware execution, selective generation, limited memory writing, and structured traces. More ambitious capabilities such as learned control policies, longitudinal governed memory, formal causal state, full retrieval reconsideration, and optimisation across multiple action types remain future work.
+
+This bounded interpretation is important. The empirical contribution is not that OtiLLM solves trustworthy AI. It is that explicit runtime governance can measurably alter how a common LLM behaves under degraded evidence and policy constraints, producing a different and often more controllable reliability profile than always-answer generation pipelines.
+
+### 6.10 Discussion summary
+
+The evaluation shows that OtiLLM is best understood as a governed execution layer rather than a higher-accuracy model. It trades coverage for conditional reliability, improves evidence faithfulness over several strong baselines under retrieval stress, integrates policy decisions without conflating them with evidence insufficiency, and records structured runtime state for auditability. At the same time, Strong RAG remains superior in factuality in several settings, Standard RAG remains competitive in faithfulness, and the current controller can be overly conservative.
+
+These results therefore support a measured conclusion: governed runtime control is a promising systems mechanism for making LLM behaviour more evidence-aware, selective, and auditable, but its value depends on how well the controller balances abstention, factual accuracy, evidence support, and operational cost.
+
+
+## 7. Conclusion and Future Work
+
+This paper presented OtiLLM as a governed runtime for evidence-aware LLM
+systems. Rather than treating generation as the default response to every
+input, OtiLLM makes policy state, evidence sufficiency, confidence, provenance,
+and action eligibility explicit at inference time and uses these signals to
+decide whether generation should proceed, be deferred, or be refused.
+
+The evaluation was designed to isolate runtime-control effects by holding the
+underlying language model constant. Across 10,000 clean observations and
+16,000 retrieval-stress observations, OtiLLM Balanced did not dominate
+conventional baselines on raw clean-task accuracy. Instead, it exhibited a
+different reliability profile. On clean content benchmarks it achieved
+evidence faithfulness of 0.414 at 0.597 coverage. Under degraded evidence, it
+reduced answer coverage and achieved statistically significant selective
+faithfulness gains over Strong RAG in four of five stress conditions and over
+ReAct in three of five conditions. It also improved selective factuality over
+Standard RAG and ReAct in several conditions, while Strong RAG remained more
+factual in multiple settings.
+
+The policy evaluation further showed why governance signals must be separated
+semantically. After correcting an implementation path that had conflated
+evidence insufficiency with policy refusal, OtiLLM achieved 90.0% policy
+correctness on XSTest, with a 16.8% false-refusal rate on safe prompts and a
+1.5% unsafe-answer rate on unsafe prompts. These outcomes matched the dedicated
+Guardrail baseline, supporting the architectural separation of policy
+governance from evidence governance rather than a claim of superior policy
+classification.
+
+The central conclusion is therefore not that OtiLLM universally outperforms
+RAG, agentic, or guardrail systems. The evidence instead supports a systems
+claim: explicit runtime governance can make the trade-off among answer
+coverage, evidence support, factuality, policy compliance, and computational
+execution observable and controllable. This is particularly relevant in
+settings where an unsupported answer may be more costly than a deferred one.
+
+Several directions remain open. First, the current confidence rule is a fixed
+implementation heuristic; future work should investigate learned and calibrated
+confidence models that optimise coverage and reliability jointly. Second,
+retrieval reconsideration should be integrated directly into the validated
+publication runtime so that insufficient evidence can trigger adaptive
+re-retrieval rather than immediate deferral. Third, stronger contradiction
+detection and evidence-quality estimation may improve factuality without
+discarding the observed faithfulness benefits. Fourth, future work should
+evaluate distinct Minimal, Balanced, and Full policies only after their
+controller behaviour is genuinely different in executable code.
+
+A further direction is longitudinal governance. The present experiments record
+bounded memory-write decisions but do not establish long-term memory quality,
+memory contamination resistance, causal memory effects, or policy adaptation
+across sessions. These behaviours require dedicated multi-session experiments.
+Similarly, the current stress suite uses controlled perturbations and should be
+extended to naturally occurring source conflict, retrieval drift, adversarial
+knowledge-base contamination, and domain-specific evidence pipelines.
+
+Finally, future evaluation should examine the human and operational cost of
+abstention. The desirable operating point for a governed runtime depends on the
+relative cost of an incorrect answer, an unsupported answer, and a deferred
+answer. Domain-specific utility studies, calibrated selective-risk curves, and
+end-user evaluation would therefore provide a stronger basis for choosing
+runtime thresholds than accuracy alone.
+
+OtiLLM should thus be viewed as an initial implementation of a broader Governed
+Runtime Intelligence perspective: LLM applications can be treated as
+state-aware systems in which generation is one governed action among several,
+rather than an unconditional endpoint. The present results provide evidence
+that this shift in abstraction changes measurable system behaviour under
+evidence degradation and policy constraints, while also exposing the remaining
+challenge of balancing reliability against useful coverage.
+
+
+## Acknowledgements
+
+To be completed before submission, if applicable.
+
+## Reproducibility Statement
+
+The final corrected analysis dataset contains 26,000 rows, 26,000 unique
+system-item-condition keys, and zero duplicates. Its SHA-256 checksum is
+`4db20dfa54557adf3d7034265c9b93ed8dcc59c9b4e32d3ab5f9942c1eb0b133`.
+The benchmark manifest, generator backend, NLI evaluator, clean outputs, stress
+outputs, and scored artefacts are separately frozen and checksummed in the
+reproducibility package. All model-based systems use the same pinned Qwen3-8B
+revision.
+
+## Final publication insertion plan
+
+The following items should be inserted into the typeset manuscript at the
+indicated locations.
+
+**Figure 1 — Governed runtime architecture.** Place in Section 3 after the
+design objective. Show the validated publication path prominently and render
+broader architectural extensions with a visually distinct boundary so that
+unevaluated modules are not mistaken for experimentally established
+components.
+
+**Figure 2 — Experimental and reproducibility pipeline.** Place in Section 4
+after the cloud execution subsection. Show frozen manifest, clean generation,
+stress generation, deterministic shards, merge/integrity validation,
+independent NLI scoring, aggregation, selective paired statistics, XSTest
+analysis, and publication outputs.
+
+**Table 1 — Evaluation systems and control mechanisms.** Place at the end of
+Section 4.2. Include model calls, retrieval use, explicit policy gate, selective
+execution, and whether the system is included in clean and/or stress testing.
+
+**Table 2 — Benchmark composition.** Place in Section 4.4. Include dataset,
+task role, number of items, evidence availability, and evaluation use. XSTest
+must remain separate from content macro averages.
+
+**Table 3 — Clean content macro results.** Place in Section 5.2. Report token
+F1, automated reference factuality, automated evidence faithfulness,
+unsupported-claim rate, coverage, latency, and model-call count.
+
+**Figure 3 — Coverage versus selective faithfulness.** Place in Section 5.3.1.
+Use the five stress conditions and show OtiLLM coverage jointly with conditional
+faithfulness; do not present conditional faithfulness without coverage.
+
+**Table 4 — Paired selective faithfulness statistics.** Place after Figure 3.
+Report matched n, OtiLLM coverage, target mean, matched baseline mean, paired
+difference, 95% bootstrap CI, and Holm-adjusted p-value.
+
+**Figure 4 — Coverage versus selective factuality.** Place in Section 5.3.2.
+Use the same stress conditions and visual conventions as Figure 3.
+
+**Table 5 — Paired selective factuality statistics.** Place after Figure 4,
+using the same statistical columns as Table 4.
+
+**Table 6 — XSTest policy outcomes.** Place in Section 5.4. Report overall
+policy correctness, safe-prompt false-refusal rate, unsafe-answer rate, and
+paired McNemar/Holm comparisons. The dedicated Guardrail baseline must be shown
+as equal to OtiLLM on the corrected policy metrics.
+
+**Figure 5 — XSTest policy trade-off.** Optional if page budget permits. Show
+safe-prompt acceptance against unsafe-prompt refusal, or equivalently false
+refusal against unsafe-answer rate, without implying superiority over the
+Guardrail baseline.
+
+## Citation placement checklist
+
+The final typeset source should cite the literature at the first substantive
+use of each concept rather than collecting citations at paragraph ends without
+clear referents.
+
+- RAG definition and parametric/non-parametric knowledge: Lewis et al. (2020).
+- Adaptive retrieval/self-reflection: Asai et al. (2024).
+- ReAct reasoning-and-acting paradigm: Yao et al. (2023).
+- Selective QA/coverage-abstention framing: Kamath, Jia, and Liang (2020).
+- Principle-based safety/alignment context: Bai et al. (2022).
+- Guardrail/safeguard landscape: Dong et al. (2024).
+- XSTest benchmark design and exaggerated-safety framing: Röttger et al. (2024).
+
+Additional references should be added only after verification, particularly for
+uncertainty-aware LLMs, hallucination/faithfulness evaluation, persistent
+memory, provenance/auditability, and relevant JAIR work.
+
+## Final claim-to-evidence guardrails
+
+The integrated manuscript must preserve these constraints in the final JAIR
+source:
+
+1. Do not claim universal superiority over RAG, ReAct, or guardrail systems.
+2. Do not describe automated NLI scores as unquestioned ground truth.
+3. Do not call policy-driven refusal and evidence-driven deferral the same
+   action.
+4. Do not claim novelty for retrieval, abstention, guardrails, memory, or
+   tracing individually.
+5. Do not present broader OtiLLM architectural modules as experimentally
+   validated unless they were executed in the publication harness.
+6. Report coverage whenever selective factuality or faithfulness is discussed.
+7. Preserve the XSTest correction disclosure and state that no gold policy
+   labels were exposed to the runtime.
+8. State that contradictory/adversarial stressors are controlled synthetic
+   perturbations.
+9. State that the current confidence equation is a fixed implementation
+   heuristic rather than a calibrated probability or learned optimum.
+10. Keep XSTest outside content macro averages.
+
+## Remaining pre-submission tasks
+
+- Verify and expand Related Work with final JAIR-ready bibliography entries.
+- Complete or clearly delimit independent human validation of automated semantic
+  metrics.
+- Generate the final tables and figures from the corrected artefacts.
+- Insert all table/figure/equation cross-references.
+- Convert the integrated manuscript to the current JAIR Author Kit.
+- Perform a final proofread for terminology, British English, equations,
+  captions, references, and supplementary-material links.
