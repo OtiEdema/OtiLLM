@@ -37,9 +37,21 @@ class OtiLLM:
         )
         self.trace_formatter = TraceFormatter()
 
-    def add_evidence(self, content: str, modality: str = "text", source: str = "inline", trust_score: float = 0.5) -> EvidenceObject:
+    def add_evidence(
+        self,
+        content: str,
+        modality: str = "text",
+        source: str = "inline",
+        trust_score: float = 0.5,
+        metadata: Optional[dict] = None,
+        timestamp=None,
+    ) -> EvidenceObject:
         evidence = self.perception.ingest(content, modality=modality, source=source)
         evidence.trust_score = trust_score
+        if metadata:
+            evidence.metadata.update(dict(metadata))
+        if timestamp is not None:
+            evidence.timestamp = timestamp
         self.store.add(evidence)
         return evidence
 
