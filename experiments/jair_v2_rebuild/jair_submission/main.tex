@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage{multirow}
 \usepackage{url}
+\graphicspath{{figures/}}
 
 \title[OtiLLM: A Governed Runtime]{OtiLLM: A Governed Cognitive Runtime for Evidence-Aware LLM Systems}
 
@@ -16,6 +17,7 @@
 % Do not guess or leave stale affiliation metadata.
 
 \begin{document}
+\maketitle
 
 \begin{abstract}
 Large language model (LLM) applications increasingly combine retrieval,
@@ -58,6 +60,7 @@ policy constraints.
 % JAIR's current kit includes journal metadata fields (e.g., Associate Editor).
 % Fill only the fields requested by the official Author Kit / submission portal.
 
+\section{Introduction}
 \subsection{Motivation}
 
 Modern LLM applications increasingly rely on more than a single prompt and a
@@ -121,15 +124,15 @@ cost.
 
 Three empirical questions guide the evaluation:
 
-**RQ1.** Does OtiLLM alter clean-task reliability relative to conventional LLM,
+\textbf{RQ1.} Does OtiLLM alter clean-task reliability relative to conventional LLM,
 RAG, self-checking, guardrail, and bounded agentic baselines when the underlying
 generator is held constant?
 
-**RQ2.** Under degraded retrieval evidence, does selective execution improve
+\textbf{RQ2.} Under degraded retrieval evidence, does selective execution improve
 conditional evidence faithfulness or factuality on the items OtiLLM chooses to
 answer?
 
-**RQ3.** How does task-aware policy gating affect refusal correctness, false
+\textbf{RQ3.} How does task-aware policy gating affect refusal correctness, false
 refusals, and unsafe answers when external evidence is not required for the
 task?
 
@@ -206,6 +209,7 @@ evaluation results. Section 6 discusses the governance–utility trade-off,
 limitations, and implications. The final section summarises the contribution
 and outlines future work.
 
+\section{Related Work}
 \subsection{Retrieval-augmented generation and adaptive retrieval}
 
 Retrieval-augmented generation (RAG) combines parametric language-model
@@ -336,6 +340,7 @@ confidence, selective execution, bounded memory persistence, and structured
 trace capture into an auditable runtime decision process evaluated under a
 common model backend.
 
+\section{OtiLLM Architecture and Governed Runtime Model}
 \subsection{Design objective}
 
 OtiLLM is designed around a simple premise: generation should be an outcome of
@@ -343,12 +348,20 @@ runtime control rather than the default response to every input. The runtime
 therefore represents and evaluates intermediate state before invoking the
 generator.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.96\textwidth]{figures/Figure_1_governed_runtime_architecture.pdf}
+\caption{Validated OtiLLM publication runtime. The content path applies evidence retrieval, evidence-sufficiency and confidence gating, whereas policy-only tasks use a separate semantic policy route. Broader architectural extensions are shown as outside the validated publication path.}
+\label{fig:runtime-architecture}
+\end{figure*}
+
 For content tasks, the publication implementation follows the control path:
 
-[
-q \textbackslash\{\}rightarrow P(q) \textbackslash\{\}rightarrow R(q,E) \textbackslash\{\}rightarrow S(E\_q)
-\textbackslash\{\}rightarrow C(S,P) \textbackslash\{\}rightarrow A \textbackslash\{\}rightarrow G(q,E\_q)
-]
+\begin{equation}
+q \rightarrow P(q) \rightarrow R(q,E) \rightarrow S(E_q)
+\rightarrow C(S,P) \rightarrow A \rightarrow G(q,E_q).
+\label{eq:runtime-path}
+\end{equation}
 
 where (q) is the query, (P) is the policy decision, (R) is evidence
 retrieval over candidate evidence (E), (S) is evidence sufficiency,
@@ -568,6 +581,7 @@ this formulation produces measurable differences in coverage, faithfulness,
 factuality, policy behaviour, and operational execution under a common
 foundation model.
 
+\section{Methodology}
 \subsection{Research design}
 
 This study evaluates OtiLLM as a governed runtime layer rather than as a new
@@ -630,6 +644,8 @@ it is not described as a full open-world iterative retrieval agent because the
 current implementation does not perform unrestricted external tool use or an
 independent second search.
 
+\input{tables/table1_systems}
+
 \subsection{OtiLLM execution path}
 
 OtiLLM receives the same underlying model backend as the baselines but routes
@@ -672,6 +688,8 @@ TruthfulQA is treated as a closed-book or evidence-availability edge case
 because it does not provide benchmark-native evidence in the same form as
 FEVER, HotpotQA, and Natural Questions. XSTest is evaluated separately as a
 policy benchmark rather than being included in content macro averages.
+
+\input{tables/table2_benchmarks}
 
 \subsection{Clean evaluation}
 
@@ -754,6 +772,13 @@ were subsequently frozen by checksum.
 The use of an L4 GPU is reported solely as part of experimental
 reproducibility. No claim of algorithmic superiority is inferred from the
 hardware configuration or wall-clock duration.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.96\textwidth]{figures/Figure_2_reproducibility_pipeline.pdf}
+\caption{Deterministic experimental and reproducibility pipeline. Clean and retrieval-stress generation are executed as separate branches, checkpointed in deterministic shards, validated before merging, independently scored, and then analysed statistically.}
+\label{fig:repro-pipeline}
+\end{figure*}
 
 \subsection{Independent factuality and faithfulness evaluation}
 
@@ -890,11 +915,8 @@ support conclusions about runtime governance, selective execution, and
 evidence-aware control under the tested conditions, not universal superiority
 or complete trustworthy-AI coverage.
 
-% -------- Publication figures --------
-% Copy the regenerated PDF figures into ./figures/ before compiling.
-% Figure 1: validated task-aware runtime architecture.
-% Figure 2: clean/stress evaluation and reproducibility pipeline.
 
+\section{Results}
 \subsection{Evaluation overview}
 
 The regenerated evaluation comprises 10,000 clean observations and 16,000
@@ -923,6 +945,8 @@ utility trade-off: OtiLLM sacrifices answer coverage and some raw answer
 accuracy in exchange for stronger evidence alignment than several non-governed
 baselines.
 
+\input{tables/table3_clean}
+
 \subsection{Selective robustness under retrieval stress}
 
 The effect of selective execution became clearer under degraded evidence.
@@ -934,7 +958,14 @@ cases. Consequently, stress comparisons were evaluated on matched items that
 OtiLLM actually answered, with paired bootstrap confidence intervals and
 paired permutation tests corrected using Holm's procedure.
 
-\#\#\#\# 5.3.1 Evidence faithfulness
+\subsubsection{Evidence faithfulness}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.88\textwidth]{figures/Figure_3_coverage_selective_faithfulness.pdf}
+\caption{Matched-subset evidence faithfulness under retrieval stress with OtiLLM answer coverage shown explicitly. Baseline faithfulness is evaluated on the exact item IDs answered by OtiLLM; the baseline systems retain full stress coverage.}
+\label{fig:selective-faithfulness}
+\end{figure*}
 
 OtiLLM achieved statistically significant selective-faithfulness gains over
 Strong RAG in four of five stress conditions. The mean paired improvement was
@@ -956,7 +987,16 @@ after Holm correction. This is important: the results support stronger
 faithfulness than Strong RAG and ReAct in several degraded-evidence settings,
 but do not establish OtiLLM as uniformly more faithful than every RAG baseline.
 
-\#\#\#\# 5.3.2 Reference factuality
+\input{tables/table4_faithfulness}
+
+\subsubsection{Reference factuality}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.88\textwidth]{figures/Figure_4_coverage_selective_factuality.pdf}
+\caption{Matched-subset reference factuality under retrieval stress with OtiLLM answer coverage shown explicitly. Baseline factuality is evaluated on the same answered item IDs, preventing selective coverage from being mistaken for unconditional superiority.}
+\label{fig:selective-factuality}
+\end{figure*}
 
 Selective factuality followed a different pattern. OtiLLM significantly
 outperformed Standard RAG under noisy evidence (Δ=0.1113, 95\% CI
@@ -981,6 +1021,8 @@ The adversarial difference did not remain significant. Thus, the evidence
 does not support a claim that governed selective execution maximises factual
 accuracy; rather, it changes the reliability profile by combining abstention
 with stronger evidence alignment in selected conditions.
+
+\input{tables/table5_factuality}
 
 \subsection{Policy-governance evaluation on XSTest}
 
@@ -1008,6 +1050,15 @@ instruction as the Guardrail baseline, this result should be interpreted as
 evidence that the runtime successfully integrates policy-aware execution, not
 as evidence that its semantic classifier is superior to the dedicated
 guardrail.
+
+\input{tables/table6_xstest}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/Figure_5_xstest_policy_tradeoff.pdf}
+\caption{XSTest false-refusal versus unsafe-answer trade-off. OtiLLM Balanced and Guardrail LLM coincide because the corrected OtiLLM policy path intentionally uses the same pinned semantic policy classifier and instruction.}
+\label{fig:xstest-tradeoff}
+\end{figure}
 
 \subsection{Operational trade-offs}
 
@@ -1038,10 +1089,8 @@ and controls the trade-off between answer coverage, evidence support, factual
 accuracy, and policy compliance. They do not support a claim of universal
 superiority over RAG or other LLM orchestration strategies.
 
-% The final tables should be converted from the corrected CSV assets in
-% final_publication_assets/tables. Do not copy values from legacy results.
-% Figures 3--5 should be copied from the regenerated corrected assets.
 
+\section{Discussion}
 \subsection{What the results show}
 
 The regenerated evaluation does not support the interpretation that OtiLLM is a universally more accurate answering system than conventional LLM, RAG, or agentic baselines. Instead, the results support a narrower and more methodologically defensible conclusion: OtiLLM changes the execution policy of an LLM system so that evidence quality, confidence, and policy state influence whether generation should proceed at all.
@@ -1139,6 +1188,8 @@ This bounded interpretation is important. The empirical contribution is not that
 The evaluation shows that OtiLLM is best understood as a governed execution layer rather than a higher-accuracy model. It trades coverage for conditional reliability, improves evidence faithfulness over several strong baselines under retrieval stress, integrates policy decisions without conflating them with evidence insufficiency, and records structured runtime state for auditability. At the same time, Strong RAG remains superior in factuality in several settings, Standard RAG remains competitive in faithfulness, and the current controller can be overly conservative.
 
 These results therefore support a measured conclusion: governed runtime control is a promising systems mechanism for making LLM behaviour more evidence-aware, selective, and auditable, but its value depends on how well the controller balances abstention, factual accuracy, evidence support, and operational cost.
+
+\section{Conclusion and Future Work}
 
 This paper presented OtiLLM as a governed runtime for evidence-aware LLM
 systems. Rather than treating generation as the default response to every
