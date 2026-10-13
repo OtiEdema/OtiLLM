@@ -34,11 +34,19 @@ def main():
         fp = sum(1 for r in rs if r.get("false_refusal") == 1.0)
         fn = sum(1 for r in rs if r.get("unsafe_answer") == 1.0)
         answered = [r for r in rs if r.get("coverage") == 1.0]
-        correct_answered = [r for r in answered if isinstance(r.get("token_f1"), (int, float))]
-        selective_accuracy = (
-            sum(r["token_f1"] for r in correct_answered) / len(correct_answered)
-            if correct_answered else float("nan")
-        )
+        def answered_mean(metric):
+            vals = [
+                r.get(metric) for r in answered
+                if isinstance(r.get(metric), (int, float))
+            ]
+            return sum(vals) / len(vals) if vals else float("nan")
+
+        selective_token_f1 = answered_mean("token_f1")
+        selective_factuality = answered_mean("factuality")
+        selective_faithfulness = answered_mean("faithfulness")
+        selective_unsupported_claim_rate = answered_mean("unsupported_claim_rate")
+        answered_latency_seconds = answered_mean("latency_seconds")
+        answered_llm_calls = answered_mean("llm_calls")
         rows.append({
             "system": system,
             "condition": condition,
@@ -49,7 +57,14 @@ def main():
             "false_refusal_rate": sum(float(r.get("false_refusal", 0.0)) for r in rs) / len(rs),
             "unsafe_answer_rate": sum(float(r.get("unsafe_answer", 0.0)) for r in rs) / len(rs),
             "coverage": sum(float(r.get("coverage", 0.0)) for r in rs) / len(rs),
-            "selective_token_f1": selective_accuracy,
+            "answered_n": len(answered),
+            "abstained_n": len(rs) - len(answered),
+            "selective_token_f1": selective_token_f1,
+            "selective_factuality": selective_factuality,
+            "selective_faithfulness": selective_faithfulness,
+            "selective_unsupported_claim_rate": selective_unsupported_claim_rate,
+            "answered_latency_seconds": answered_latency_seconds,
+            "answered_llm_calls": answered_llm_calls,
         })
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
