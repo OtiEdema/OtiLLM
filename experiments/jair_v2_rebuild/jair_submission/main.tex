@@ -40,6 +40,7 @@
 \email{otiedema@gmail.com}
 \affiliation{%
   \institution{Independent Researcher}
+  \country{United Kingdom}
 }
 \renewcommand{\shortauthors}{Edema}
 \begin{document}
@@ -567,7 +568,7 @@ implementation. In the current experiment:
 
 By contrast, full failure-specific retrieval reconsideration, formal cognitive
 utility optimisation, clarification/escalation/forget actions, longitudinal
-memory governance, learned policies, and distinct Minimal/Balanced/Full
+memory governance, learned policies, and distinct Minimal, Balanced, and Full
 controller variants are not presented as empirically established.
 
 \subsection{Governed Runtime Intelligence as an abstraction}
@@ -661,8 +662,8 @@ evidence context are evaluated: Standard RAG, Strong RAG, ReAct, and OtiLLM
 Balanced.
 
 All enabled LLM-based systems use the same pinned generator backend:
-Qwen/Qwen3-8B, revision
-\texttt{a0809d1efaf104a46bbc2acaecd69617e9696312}. Generation is performed in
+\nolinkurl{Qwen/Qwen3-8B}, revision
+\\nolinkurl{a0809d1efaf104a46bbc2acaecd69617e9696312}. Generation is performed in
 non-thinking mode using deterministic greedy decoding, temperature 0.0, and a
 maximum generation length of 256 tokens. Holding the generator constant is
 essential because the paper evaluates the effect of runtime orchestration and
@@ -716,9 +717,9 @@ contains 1,250 records:
 \end{itemize}
 
 The corrected frozen manifest has SHA-256
-\texttt{62bd9c4b6bf8810a93a2065683f4d29a3f946246a45f2b1be98c6459e18b329c}.
+\\nolinkurl{62bd9c4b6bf8810a93a2065683f4d29a3f946246a45f2b1be98c6459e18b329c}.
 The ordered item-ID checksum is
-\texttt{ed9aac76d0529f736dcfe8265374d3919169f5102d7f6d6d76f1207f6e162c85}.
+\\nolinkurl{ed9aac76d0529f736dcfe8265374d3919169f5102d7f6d6d76f1207f6e162c85}.
 
 TruthfulQA is treated as a closed-book or evidence-availability edge case
 because it does not provide benchmark-native evidence in the same form as
@@ -735,7 +736,7 @@ clean observations. The merged clean result contains exactly 10,000 unique
 system-item-condition keys with no duplicates.
 
 The clean merged result is frozen with SHA-256
-\texttt{61912c5fbbbefc57e3d17a6eee59addeabf7e4ae032c9e50d186896cc7d58479}.
+\\nolinkurl{61912c5fbbbefc57e3d17a6eee59addeabf7e4ae032c9e50d186896cc7d58479}.
 
 Content macro averages are computed with equal weight across TruthfulQA,
 FEVER, HotpotQA, and Natural Questions. XSTest is excluded from these content
@@ -770,7 +771,7 @@ poisoning, or malicious knowledge-base compromise.
 
 The merged stress result contains 16,000 rows, 16,000 unique keys, and zero
 duplicates. Its SHA-256 is
-\texttt{6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098}.
+\\nolinkurl{6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098}.
 
 \subsection{Cloud execution environment and long-running experimental procedure}
 
@@ -830,8 +831,8 @@ or wall-clock duration.
 \subsection{Automated reference factuality and faithfulness evaluation}
 
 Generated outputs are evaluated after generation using the independent NLI
-model MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli, revision
-\texttt{6f5cf0a2b59cabb106aca4c287eed12e357e90eb}, with an entailment threshold
+model \nolinkurl{MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli}, revision
+\\nolinkurl{6f5cf0a2b59cabb106aca4c287eed12e357e90eb}, with an entailment threshold
 of 0.5.
 
 The evaluator is used to derive two distinct semantic outcomes:
@@ -847,9 +848,9 @@ Unsupported-claim rate is reported separately rather than inferred from
 factuality alone.
 
 The clean NLI-scored file contains 10,000 unique observations and has SHA-256
-\texttt{f22c3514b651d413b972125e4a577e6bb7733aa006deb2f3783852532b3b7f5c}.
+\\nolinkurl{f22c3514b651d413b972125e4a577e6bb7733aa006deb2f3783852532b3b7f5c}.
 The stress NLI-scored file contains 16,000 unique observations and has SHA-256
-\texttt{ae678a2fdb381b0ebfaff06b3e81bb68cbdcb2d9d4bcf39fcb4f8e250bcec7c5}.
+\\nolinkurl{ae678a2fdb381b0ebfaff06b3e81bb68cbdcb2d9d4bcf39fcb4f8e250bcec7c5}.
 
 The NLI evaluator is treated as an automated measurement instrument, not as
 ground truth. A stratified double-adjudicated human validation stage is
@@ -1023,9 +1024,9 @@ p=0.00150), and 0.1168 under stale evidence (95\% CI [0.0863, 0.1493],
 p=0.00150). The adversarial comparison against Strong RAG was not significant.
 
 Against ReAct, OtiLLM showed significant selective-faithfulness improvements
-under noisy evidence (Δ=0.0433, 95\% CI [0.0133, 0.0726], Holm-adjusted
-p=0.0468), contradictory evidence (Δ=0.0409, 95\% CI [0.0184, 0.0621],
-p=0.00220), and stale evidence (Δ=0.0589, 95\% CI [0.0271, 0.0922],
+under noisy evidence ($\\Delta$=0.0433, 95\% CI [0.0133, 0.0726], Holm-adjusted
+p=0.0468), contradictory evidence ($\\Delta$=0.0409, 95\% CI [0.0184, 0.0621],
+p=0.00220), and stale evidence ($\\Delta$=0.0589, 95\% CI [0.0271, 0.0922],
 p=0.00700). Improvements under incomplete and adversarial evidence did not
 remain significant after multiple-comparison correction.
 
@@ -1047,24 +1048,24 @@ but do not establish OtiLLM as uniformly more faithful than every RAG baseline.
 \end{figure*}
 
 Selective factuality followed a different pattern. OtiLLM significantly
-outperformed Standard RAG under noisy evidence (Δ=0.1113, 95\% CI
+outperformed Standard RAG under noisy evidence ($\\Delta$=0.1113, 95\% CI
 [0.0622, 0.1619], Holm-adjusted p=0.00150), contradictory evidence
-(Δ=0.0579, 95\% CI [0.0222, 0.0955], p=0.0100), incomplete evidence
-(Δ=0.1379, 95\% CI [0.0801, 0.1962], p=0.00150), and adversarial evidence
-(Δ=0.0941, 95\% CI [0.0598, 0.1297], p=0.00150). The stale-evidence
+($\\Delta$=0.0579, 95\% CI [0.0222, 0.0955], p=0.0100), incomplete evidence
+($\\Delta$=0.1379, 95\% CI [0.0801, 0.1962], p=0.00150), and adversarial evidence
+($\\Delta$=0.0941, 95\% CI [0.0598, 0.1297], p=0.00150). The stale-evidence
 comparison was not significant.
 
 Relative to ReAct, OtiLLM produced significantly higher factuality under
-contradictory evidence (Δ=0.0902, 95\% CI [0.0500, 0.1297],
-Holm-adjusted p=0.00150), incomplete evidence (Δ=0.1436, 95\% CI
-[0.0871, 0.2001], p=0.00150), and adversarial evidence (Δ=0.0871,
+contradictory evidence ($\\Delta$=0.0902, 95\% CI [0.0500, 0.1297],
+Holm-adjusted p=0.00150), incomplete evidence ($\\Delta$=0.1436, 95\% CI
+[0.0871, 0.2001], p=0.00150), and adversarial evidence ($\\Delta$=0.0871,
 95\% CI [0.0516, 0.1230], p=0.00150). The noisy and stale comparisons were
 not significant.
 
 Strong RAG remained the strongest factuality baseline in several conditions.
 OtiLLM was significantly lower than Strong RAG under noisy evidence
-(Δ=-0.1871), contradictory evidence (Δ=-0.1555), incomplete evidence
-(Δ=-0.1190), and stale evidence (Δ=-0.2653), all after Holm correction.
+($\\Delta$=-0.1871), contradictory evidence ($\\Delta$=-0.1555), incomplete evidence
+($\\Delta$=-0.1190), and stale evidence ($\\Delta$=-0.2653), all after Holm correction.
 The adversarial difference did not remain significant. Thus, the evidence
 does not support a claim that governed selective execution maximises factual
 accuracy; rather, it changes the reliability profile by combining abstention
@@ -1319,7 +1320,7 @@ challenge of balancing reliability against useful coverage.
 \section{Reproducibility and Integrity Record}
 The final corrected analysis dataset contains 26,000 rows, 26,000 unique
 system--item--condition keys, and zero duplicates. Its SHA-256 checksum is
-\texttt{4db20dfa54557adf3d7034265c9b93ed8dcc59c9b4e32d3ab5f9942c1eb0b133}.
+\\nolinkurl{4db20dfa54557adf3d7034265c9b93ed8dcc59c9b4e32d3ab5f9942c1eb0b133}.
 The benchmark manifest, generator backend, NLI evaluator, clean outputs,
 stress outputs, and scored artefacts are separately frozen and checksummed in
 the accompanying reproducibility package.
@@ -1367,7 +1368,7 @@ Does this work rely on one or more data sets? [yes]
 \item Public benchmark datasets are accompanied by citations in the final bibliography. [partially]
 \item The benchmark datasets used in the study are publicly available from their cited sources. [yes]
 \item No non-public benchmark dataset is introduced. [NA]
-\item Deterministic sampling, eligibility filtering, evidence construction, perturbation generation, batching/sharding, and manifest freezing are described in the methodology and reproducibility artefacts. [yes]
+\item Sampling, eligibility filtering, evidence construction, perturbations, sharding, and manifest freezing are documented in the methodology and reproducibility artefacts. [yes]
 \end{enumerate}
 
 \subsection*{Checklist explanation}
