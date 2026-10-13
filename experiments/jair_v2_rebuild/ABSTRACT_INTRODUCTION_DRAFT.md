@@ -111,9 +111,9 @@ generator is held constant?
 conditional evidence faithfulness or factuality on the items OtiLLM chooses to
 answer?
 
-**RQ3.** Can policy-only execution be separated from evidence-sufficiency
-gating so that the runtime handles safe and unsafe requests without conflating
-missing evidence with policy risk?
+**RQ3.** How does task-aware policy gating affect refusal correctness, false
+refusals, and unsafe answers when external evidence is not required for the
+task?
 
 ### 1.4 Contributions
 
