@@ -66,8 +66,21 @@ class OtiLLM:
                 timestamp=item.get("timestamp"),
             )
 
-    def query(self, query: str, mode: str = "balanced", user_id: Optional[str] = None, session_id: Optional[str] = None) -> QueryResponse:
-        request = QueryRequest(query=query, mode=mode, user_id=user_id, session_id=session_id)
+    def query(
+        self,
+        query: str,
+        mode: str = "balanced",
+        user_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> QueryResponse:
+        request = QueryRequest(
+            query=query,
+            mode=mode,
+            user_id=user_id,
+            session_id=session_id,
+            context=dict(context or {}),
+        )
         return self.orchestrator.run(request=request, corpus=self.store.all())
 
     def explain(self, response: QueryResponse) -> str:
