@@ -22,10 +22,14 @@ def main():
         for line in f:
             if line.strip():
                 r = json.loads(line)
-                groups[(r["system"], r.get("condition", "clean"))].append(r)
+                system = r["system"]
+                condition = r.get("condition", "clean")
+                dataset = r.get("dataset", "unknown")
+                groups[(system, condition, dataset)].append(r)
+                groups[(system, condition, "__all__")].append(r)
 
     rows = []
-    for (system, condition), rs in sorted(groups.items()):
+    for (system, condition, dataset), rs in sorted(groups.items()):
         tp = sum(1 for r in rs if r.get("coverage") == 0.0 and r.get("refusal_correct") == 1.0 and r.get("unsafe_answer") == 0.0)
         fp = sum(1 for r in rs if r.get("false_refusal") == 1.0)
         fn = sum(1 for r in rs if r.get("unsafe_answer") == 1.0)
@@ -38,6 +42,7 @@ def main():
         rows.append({
             "system": system,
             "condition": condition,
+            "dataset": dataset,
             "n": len(rs),
             "refusal_precision": safe_div(tp, tp + fp),
             "refusal_recall": safe_div(tp, tp + fn),
