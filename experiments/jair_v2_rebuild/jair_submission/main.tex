@@ -777,7 +777,10 @@ duplicates. Its SHA-256 is
 The final publication experiments were executed in a Google Colab cloud
 environment backed by an NVIDIA L4 GPU. The complete experimental campaign was
 performed over approximately 48 hours of cumulative execution and validation
-rather than as a single uninterrupted notebook run.
+rather than as a single uninterrupted notebook run. Because Colab host
+configurations can vary across sessions, only hardware and software
+characteristics that were explicitly recorded or fixed in the publication
+workflow are reported.
 
 The long-running workflow was divided into deterministic stages so that
 transient notebook disconnections did not invalidate completed work. Raw
@@ -807,8 +810,14 @@ balance, unique keys, and duplicate counts had been checked. Merged artefacts
 were subsequently frozen by checksum.
 
 The use of an L4 GPU is reported solely as part of experimental
-reproducibility. No claim of algorithmic superiority is inferred from the
-hardware configuration or wall-clock duration.
+reproducibility. The publication workflow fixed key software dependencies,
+including datasets 2.21.0, Transformers 4.57.6, Hugging Face Hub 0.36.2,
+fsspec 2024.6.1, Accelerate 1.x, and SciPy 1.11 or later, together with the
+repository's pinned model revisions and deterministic decoding configuration.
+The transient Colab host CPU, RAM, and driver-level details were not preserved
+for every session and are therefore not reconstructed retrospectively. No
+claim of algorithmic superiority is inferred from the hardware configuration
+or wall-clock duration.
 
 \begin{figure*}[t]
 \centering
@@ -1339,7 +1348,7 @@ Does this paper include computational experiments? [yes]
 \item A reusable licence for the unaggregated outputs will be stated in the archival release. [partially]
 \item Research-use terms for the unaggregated outputs will be stated in the archival release. [partially]
 \item Deterministic hash sampling uses seed 42; model generation uses deterministic greedy decoding with temperature 0.0. [yes]
-\item The execution environment is described, including the NVIDIA L4 GPU and relevant software versions. Exact host RAM, CUDA/PyTorch, and operating-system details are captured separately from the final Colab runtime and should be inserted before submission. [partially]
+\item The execution environment is described using the hardware and software details that were explicitly recorded or fixed during the experiments, including the NVIDIA L4 GPU and pinned evaluation dependencies. Transient Colab host CPU, RAM, and driver-level details were not preserved for every session and are not reconstructed retrospectively. [partially]
 \item Evaluation metrics and their motivation are described, including token F1, automated reference factuality, automated evidence faithfulness, unsupported-claim rate, refusal behaviour, coverage, latency, and operation counts. [yes]
 \item The number of observations/runs used for each result is reported through the frozen manifest and condition/system counts. [yes]
 \item Unsuccessful or unsatisfactory results are not silently discarded; the original XSTest blanket-abstention failure and its pre-specified correction are disclosed. [yes]
@@ -1364,6 +1373,7 @@ Does this work rely on one or more data sets? [yes]
 \subsection*{Checklist explanation}
 Items marked ``partially'' are intentionally conservative. Before submission,
 the final archival release should expose the unaggregated outputs under explicit
-reuse terms, complete all benchmark citations, and insert the exact final Colab
-host-memory, operating-system, CUDA, and PyTorch details.
+reuse terms and complete all benchmark citations. Transient Colab host details
+that were not preserved during the original runs should remain explicitly
+reported as unavailable rather than inferred from a later runtime.
 \end{document}
