@@ -1,7 +1,30 @@
-\documentclass[review]{jair}
+%% OtiLLM JAIR submission source.
+%% Conforms to the JAIR Author Kit supplied by the author (2025+ ACM-based JAIR style).
+\documentclass[manuscript, screen, review]{jair}
 
-% JAIR adopted its new ACM-based LaTeX style for submissions from 2025 onward.
-% Do not modify margins, fonts, spacing, or the class file.
+\setcopyright{cc}
+\acmDOI{10.1613/jair.1.xxxxx}
+
+% Journal metadata is assigned during the editorial/production process.
+\JAIRAE{Insert JAIR AE Name}
+\JAIRTrack{}
+\acmVolume{0}
+\acmArticle{0}
+\acmMonth{0}
+\acmYear{2026}
+
+\RequirePackage[
+  datamodel=acmdatamodel,
+  style=acmauthoryear,
+  backend=biber,
+  giveninits=true,
+  uniquename=init
+]{biblatex}
+
+\renewcommand*{\bibopenbracket}{(}
+\renewcommand*{\bibclosebracket}{)}
+\addbibresource{references.bib}
+
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
@@ -12,14 +35,14 @@
 \title[OtiLLM: A Governed Runtime]{OtiLLM: A Governed Cognitive Runtime for Evidence-Aware LLM Systems}
 
 \author{Oritsetimeyin Edema}
+\authornote{Corresponding Author.}
 \orcid{0009-0002-2804-4438}
+\email{otiedema@gmail.com}
 \affiliation{%
   \institution{Independent Researcher}
 }
-\email{otiedema@gmail.com}
-
+\renewcommand{\shortauthors}{Edema}
 \begin{document}
-\maketitle
 
 \begin{abstract}
 Large language model (LLM) applications increasingly combine retrieval,
@@ -58,6 +81,10 @@ baselines; instead, they show that runtime governance can produce a more
 selective and controllable reliability profile under degraded evidence and
 policy constraints.
 \end{abstract}
+
+% JAIR does not use ACM CCS Concepts or Keywords.
+% Received/accepted dates are assigned by the journal.
+\maketitle
 
 % JAIR's current kit includes journal metadata fields (e.g., Associate Editor).
 % Fill only the fields requested by the official Author Kit / submission portal.
@@ -355,6 +382,7 @@ generator.
 \includegraphics[width=0.96\textwidth]{figures/Figure_1_governed_runtime_architecture.pdf}
 \caption{Validated OtiLLM publication runtime. The content path applies evidence retrieval, evidence-sufficiency and confidence gating, whereas policy-only tasks use a separate semantic policy route. Broader architectural extensions are shown as outside the validated publication path.}
 \label{fig:runtime-architecture}
+\Description{A task-aware flow diagram begins with a query and static policy gate. Content tasks branch through evidence retrieval, evidence sufficiency, confidence gating, generation, execution, or defer. Policy-only tasks branch through a semantic policy classifier and then execute or refuse. A note beneath the flow lists broader OtiLLM components that are not fully validated in this study.}
 \end{figure*}
 
 For content tasks, the publication implementation follows the control path:
@@ -787,6 +815,7 @@ hardware configuration or wall-clock duration.
 \includegraphics[width=0.96\textwidth]{figures/Figure_2_reproducibility_pipeline.pdf}
 \caption{Deterministic experimental and reproducibility pipeline. Clean and retrieval-stress generation are executed as separate branches, checkpointed in deterministic shards, validated before merging, independently scored, and then analysed statistically.}
 \label{fig:repro-pipeline}
+\Description{A reproducibility workflow starts with the frozen benchmark manifest, branches into clean generation and retrieval-stress generation, rejoins at shard merging and integrity checks, then proceeds through independent NLI scoring to aggregate analysis, paired statistics, and publication assets. Persistent checkpoints and frozen checksums are indicated as controls.}
 \end{figure*}
 
 \subsection{Automated reference factuality and faithfulness evaluation}
@@ -973,6 +1002,7 @@ paired permutation tests corrected using Holm's procedure.
 \includegraphics[width=0.88\textwidth]{figures/Figure_3_coverage_selective_faithfulness.pdf}
 \caption{Matched-subset evidence faithfulness under retrieval stress with OtiLLM answer coverage shown explicitly. Baseline faithfulness is evaluated on the exact item IDs answered by OtiLLM; the baseline systems retain full stress coverage.}
 \label{fig:selective-faithfulness}
+\Description{A line chart compares OtiLLM Balanced with Standard RAG, Strong RAG, and ReAct across noisy, contradictory, incomplete, adversarial, and stale evidence. The primary axis shows matched-subset evidence-faithfulness values and a secondary axis shows OtiLLM coverage, making the coverage-reliability trade-off visible.}
 \end{figure*}
 
 OtiLLM achieved statistically significant selective-faithfulness gains over
@@ -1004,6 +1034,7 @@ but do not establish OtiLLM as uniformly more faithful than every RAG baseline.
 \includegraphics[width=0.88\textwidth]{figures/Figure_4_coverage_selective_factuality.pdf}
 \caption{Matched-subset reference factuality under retrieval stress with OtiLLM answer coverage shown explicitly. Baseline factuality is evaluated on the same answered item IDs, preventing selective coverage from being mistaken for unconditional superiority.}
 \label{fig:selective-factuality}
+\Description{A line chart compares OtiLLM Balanced with Standard RAG, Strong RAG, and ReAct across five retrieval-stress conditions. The primary axis shows matched-subset reference-factuality values and a secondary axis shows OtiLLM answer coverage. Strong RAG remains higher in factuality in several conditions.}
 \end{figure*}
 
 Selective factuality followed a different pattern. OtiLLM significantly
@@ -1066,6 +1097,7 @@ guardrail.
 \includegraphics[width=0.98\linewidth]{figures/Figure_5_xstest_policy_tradeoff.pdf}
 \caption{XSTest false-refusal versus unsafe-answer trade-off. OtiLLM Balanced and Guardrail LLM coincide because the corrected OtiLLM policy path intentionally uses the same pinned semantic policy classifier and instruction.}
 \label{fig:xstest-tradeoff}
+\Description{A scatter plot places systems by false-refusal rate on safe XSTest prompts and unsafe-answer rate on unsafe prompts. OtiLLM Balanced and Guardrail LLM occupy the same point because the corrected OtiLLM policy path uses the same pinned semantic policy classifier. Non-policy-aware baselines occupy a separate shared point.}
 \end{figure}
 
 \subsection{Operational trade-offs}
@@ -1271,10 +1303,10 @@ challenge of balancing reliability against useful coverage.
 % Add acknowledgements only if applicable.
 \end{acks}
 
-\bibliographystyle{ACM-Reference-Format}
-\bibliography{references}
+\printbibliography
 
 \appendix
+
 \section{Reproducibility and Integrity Record}
 The final corrected analysis dataset contains 26,000 rows, 26,000 unique
 system--item--condition keys, and zero duplicates. Its SHA-256 checksum is
@@ -1283,4 +1315,55 @@ The benchmark manifest, generator backend, NLI evaluator, clean outputs,
 stress outputs, and scored artefacts are separately frozen and checksummed in
 the accompanying reproducibility package.
 
+\section{Reproducibility Checklist for JAIR}
+
+\subsection*{All articles}
+\begin{enumerate}
+\item All claims investigated in this work are clearly stated. [yes]
+\item Clear explanations are given how the work reported substantiates the claims. [yes]
+\item Limitations or technical assumptions are stated clearly and explicitly. [yes]
+\item Conceptual outlines and important implementation details of the introduced AI method are provided. [yes]
+\item Motivation is provided for the principal design choices, including algorithms, parameters, datasets, and experimental protocols. [yes]
+\end{enumerate}
+
+\subsection*{Articles containing theoretical contributions}
+Does this paper make theoretical contributions? [no]
+
+\subsection*{Articles reporting on computational experiments}
+Does this paper include computational experiments? [yes]
+\begin{enumerate}
+\item Source code required for the experiments is publicly available in the OtiLLM repository and the publication branch is identified. [yes]
+\item The source code is distributed under a licence allowing reproducibility use. [yes]
+\item The source code is distributed under a licence allowing research use. [yes]
+\item Raw, unaggregated experimental outputs are archived; a public archival release is to be completed with the final reproducibility package. [partially]
+\item A reusable licence for the unaggregated outputs will be stated in the archival release. [partially]
+\item Research-use terms for the unaggregated outputs will be stated in the archival release. [partially]
+\item Deterministic hash sampling uses seed 42; model generation uses deterministic greedy decoding with temperature 0.0. [yes]
+\item The execution environment is described, including the NVIDIA L4 GPU and relevant software versions. Exact host RAM, CUDA/PyTorch, and operating-system details are captured separately from the final Colab runtime and should be inserted before submission. [partially]
+\item Evaluation metrics and their motivation are described, including token F1, automated reference factuality, automated evidence faithfulness, unsupported-claim rate, refusal behaviour, coverage, latency, and operation counts. [yes]
+\item The number of observations/runs used for each result is reported through the frozen manifest and condition/system counts. [yes]
+\item Unsuccessful or unsatisfactory results are not silently discarded; the original XSTest blanket-abstention failure and its pre-specified correction are disclosed. [yes]
+\item Analysis includes paired bootstrap confidence intervals, paired permutation tests, McNemar tests, effect differences, and Holm correction rather than only point summaries. [yes]
+\item Primary model and evaluator revisions, decoding parameters, NLI threshold, and runtime thresholds used by the publication harness are reported. [yes]
+\item The study did not conduct an unrestricted hyperparameter search for the final publication results; the evaluated controller uses the fixed publication configuration. [partially]
+\item Appropriately paired statistical hypothesis tests are used for the confirmatory comparisons. [yes]
+\end{enumerate}
+
+\subsection*{Articles using data sets}
+Does this work rely on one or more data sets? [yes]
+\begin{enumerate}
+\item No newly introduced benchmark dataset is claimed in this paper. [NA]
+\item No newly introduced benchmark dataset licence is applicable. [NA]
+\item No newly introduced benchmark dataset research-use licence is applicable. [NA]
+\item Public benchmark datasets are accompanied by citations in the final bibliography. [partially]
+\item The benchmark datasets used in the study are publicly available from their cited sources. [yes]
+\item No non-public benchmark dataset is introduced. [NA]
+\item Deterministic sampling, eligibility filtering, evidence construction, perturbation generation, batching/sharding, and manifest freezing are described in the methodology and reproducibility artefacts. [yes]
+\end{enumerate}
+
+\subsection*{Checklist explanation}
+Items marked ``partially'' are intentionally conservative. Before submission,
+the final archival release should expose the unaggregated outputs under explicit
+reuse terms, complete all benchmark citations, and insert the exact final Colab
+host-memory, operating-system, CUDA, and PyTorch details.
 \end{document}
