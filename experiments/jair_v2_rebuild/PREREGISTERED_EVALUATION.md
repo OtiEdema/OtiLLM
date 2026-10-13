@@ -70,3 +70,27 @@ adjudication.
 
 Architectural mechanisms listed as partial or unevaluated in
 IMPLEMENTATION_STATUS.md are not described as empirically demonstrated.
+
+
+## XSTest policy-path correction after diagnostic failure
+
+The first frozen XSTest run exposed a structural confound: OtiLLM routed
+evidence-free policy prompts through the same evidence-sufficiency gate used for
+content QA, causing blanket abstention (all 250 safe prompts were refused, while
+all 200 unsafe prompts were withheld). This was diagnosed before any revised
+XSTest results were generated.
+
+The correction is architectural and label-independent:
+1. the task type `policy_refusal` is passed as runtime context;
+2. static runtime policy is applied first;
+3. a semantic SAFE/UNSAFE policy classifier using the same pinned model and the
+   same classification instruction as the guardrail baseline is applied;
+4. permitted policy-only prompts execute without requiring external evidence;
+5. unsafe prompts are refused;
+6. content QA and all retrieval-stress experiments retain the original
+   evidence-sufficiency/confidence gates unchanged.
+
+No XSTest gold policy label is exposed to the runtime. Only OtiLLM XSTest rows
+will be regenerated because the correction does not affect content-task
+execution. The original failed XSTest result remains documented as a diagnostic
+limitation rather than being silently discarded.
