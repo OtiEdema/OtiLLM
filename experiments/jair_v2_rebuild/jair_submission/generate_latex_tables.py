@@ -43,19 +43,26 @@ def write(path, text):
 
 def table1(src, out):
     rr=rows(src)
+    gate_short = {
+        "No controller gate (100% stress coverage)": "None",
+        "No controller gate": "None",
+        "Policy refusal": "Policy",
+        "Evidence/confidence defer + policy refusal": "Evidence/policy",
+        "No": "None",
+    }
     body="\n".join(
         f"{esc(r['system'])} & {esc(r['model_calls'])} & {esc(r['retrieval'])} & "
-        f"{esc(r['policy_gate'])} & {esc(r['selective_execution'])} & "
+        f"{esc(r['policy_gate'])} & {esc(gate_short.get(r['selective_execution'], r['selective_execution']))} & "
         f"{esc(r['clean'])} & {esc(r['stress'])} \\\\" for r in rr
     )
     write(out, rf"""\begin{{table*}}[t]
 \centering
 \caption{{Systems and control mechanisms used in the evaluation. Stress testing is restricted to the retrieval-consuming systems.}}
 \label{{tab:systems}}
-\small
+\scriptsize
 \begin{{tabular}}{{lcccccc}}
 \toprule
-System & Calls & Retrieval & Policy gate & Selective execution & Clean & Stress \\
+System & Calls & Retrieval & Policy & Execution gate & Clean & Stress \\
 \midrule
 {body}
 \bottomrule
