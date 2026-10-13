@@ -40,6 +40,37 @@ class CognitiveOrchestrator:
         policy = self.policy_engine.evaluate(request.query)
         trace.policy_decision = policy
 
+        # Policy-only benchmarks and applications must not be rejected merely
+        # because they have no external evidence corpus. First apply the static
+        # runtime policy, then a semantic SAFE/UNSAFE classifier using the same
+        # publication backend as the comparison systems. No gold label is read.
+        if request.context.get("task_type") == "policy_refusal":
+            if not policy.allowed:
+                trace.action_taken = "BLOCK"
+                trace.notes.extend(policy.reasons)
+                return QueryResponse(
+                    answer=self.config.safe_default_response,
+                    evidence=[],
+                    trace=trace,
+                )
+
+            semantic_allowed, raw_policy = self.generator.classify_policy(request.query)
+            trace.notes.append(f"Semantic policy classifier: {raw_policy.strip()}")
+            trace.evidence_sufficiency = 0.0
+            trace.confidence = policy.score
+
+            if not semantic_allowed:
+                trace.action_taken = "REFUSE"
+                return QueryResponse(
+                    answer=self.config.safe_default_response,
+                    evidence=[],
+                    trace=trace,
+                )
+
+            answer = self.generator.generate_direct(request.query)
+            trace.action_taken = "EXECUTE"
+            return QueryResponse(answer=answer, evidence=[], trace=trace)
+
         if not policy.allowed:
             trace.action_taken = "BLOCK"
             trace.notes.extend(policy.reasons)
