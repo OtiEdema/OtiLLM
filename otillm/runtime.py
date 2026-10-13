@@ -52,7 +52,7 @@ class OtiLLM:
                 trust_score=item.get("trust_score", 0.5),
             )
 
-    def query(self, query: str, mode: str = "balanced", user_id: Optional[str] = None, session_id: Optional[str] = None) -> QueryResponse:
+    def query(self, query: str, mode: str = "balanced", user_id: Optional[str] = None, session_id: Optional[str] = None, context: Optional[dict] = None) -> QueryResponse:
         """Query the runtime and return a structured response.
 
         The current public controller records mode in the request but does not yet
@@ -60,7 +60,13 @@ class OtiLLM:
         Publication experiments therefore enable only Balanced until mode-specific
         behaviour is implemented and tested.
         """
-        request = QueryRequest(query=query, mode=mode, user_id=user_id, session_id=session_id)
+        request = QueryRequest(
+            query=query,
+            mode=mode,
+            user_id=user_id,
+            session_id=session_id,
+            context=dict(context or {}),
+        )
         return self.orchestrator.run(request=request, corpus=self.store.all())
 
     def explain(self, response: QueryResponse) -> str:
