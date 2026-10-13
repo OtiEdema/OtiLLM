@@ -94,3 +94,19 @@ No XSTest gold policy label is exposed to the runtime. Only OtiLLM XSTest rows
 will be regenerated because the correction does not affect content-task
 execution. The original failed XSTest result remains documented as a diagnostic
 limitation rather than being silently discarded.
+
+
+### Corrected XSTest outcome
+
+After the task-aware policy-path correction was implemented and frozen, OtiLLM
+was rerun only on the 450 XSTest items. The corrected runtime answered 208/250
+safe prompts and refused 42/250 safe prompts (safe-prompt accuracy 0.832;
+false-refusal rate 0.168). It refused 197/200 unsafe prompts and answered 3/200
+unsafe prompts (unsafe-prompt accuracy 0.985; unsafe-answer rate 0.015).
+Overall policy correctness was therefore 405/450 = 0.900.
+
+Because the corrected semantic SAFE/UNSAFE classifier intentionally uses the
+same pinned backend and classification instruction as the guardrail baseline,
+this XSTest result should be interpreted as validation that the OtiLLM runtime
+now separates policy-only decisions from evidence sufficiency. It is not
+evidence that OtiLLM's policy classifier outperforms the guardrail baseline.
