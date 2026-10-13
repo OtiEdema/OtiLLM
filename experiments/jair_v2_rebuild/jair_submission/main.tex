@@ -60,8 +60,8 @@ We evaluate OtiLLM Balanced against seven comparison systems using a common
 pinned Qwen3-8B backend across TruthfulQA, FEVER, HotpotQA, Natural Questions,
 and XSTest. The clean evaluation comprises 10,000 observations, while a
 retrieval-stress evaluation contributes 16,000 additional observations under
-noisy, contradictory, incomplete, adversarial, and stale evidence. Independent
-DeBERTa-based NLI scoring is used for factuality and evidence faithfulness, and
+noisy, contradictory, incomplete, adversarial, and stale evidence. A separately pinned automated
+DeBERTa-based NLI evaluator is used for factuality and evidence faithfulness, and
 paired bootstrap confidence intervals, permutation tests, McNemar tests, and
 Holm correction are used for inferential analysis.
 
@@ -271,7 +271,7 @@ state.
 ReAct integrates reasoning and acting by interleaving model-generated reasoning
 with actions that query external environments or knowledge sources
 \citep{yao2023react}. More broadly, agentic LLM systems increasingly combine
-planning, tools, retrieval, memory, and iterative control.
+planning, tools, retrieval, memory, and iterative control \citep{plaat2025agentic}.
 
 This literature is relevant to OtiLLM because both approaches move beyond a
 single prompt-to-response interaction. The distinction is that OtiLLM's primary
@@ -308,7 +308,7 @@ novelty.
 \subsection{Selective prediction, abstention, and coverage}
 
 Selective prediction studies when a model should abstain rather than return a
-potentially unreliable prediction. In selective question answering, the
+potentially unreliable prediction; recent LLM-focused work treats abstention as a broader reliability and safety capability \citep{wen2025abstention}. In selective question answering, the
 objective is to maximise coverage subject to an acceptable error rate, making
 abstention a first-class decision rather than a failure mode
 \citep{kamath2020selective}.
@@ -334,7 +334,7 @@ strictly evidence-grounded response may be faithful but incomplete if the
 retrieved context is insufficient.
 
 The present work therefore separates reference factuality from evidence
-faithfulness. This separation is especially important under contradictory,
+faithfulness, consistent with recent work that distinguishes factual correctness from evidence-grounded evaluation dimensions \citep{wang2024factuality,es2024ragas}. This separation is especially important under contradictory,
 incomplete, or stale evidence, where a model's parametric knowledge may produce
 a correct answer that is not justified by the current evidence state. OtiLLM's
 runtime objective is not simply to maximise reference agreement, but to control
@@ -461,7 +461,7 @@ explicit evidence state on which governance decisions can operate.
 After retrieval, the runtime computes an evidence-sufficiency score. This score
 is used as a gate rather than merely as an explanatory statistic.
 
-Let (s\_e) denote evidence sufficiency and (	au\_e) the configured evidence
+Let $s_e$ denote evidence sufficiency and $\tau_e$ the configured evidence
 threshold. The publication controller implements:
 
 \begin{equation}
@@ -485,9 +485,9 @@ c = \min\left(1, 0.65s_e + 0.35s_p\right).
 \label{eq:confidence}
 \end{equation}
 
-where (s\_e) is evidence sufficiency and (s\_p) is the policy score.
+where $s_e$ is evidence sufficiency and $s_p$ is the policy score.
 
-If (c < 	au\_c), where (	au\_c) is the configured confidence threshold,
+If $c < \tau_c$, where $\tau_c$ is the configured confidence threshold,
 the runtime defers with a low-confidence action rather than invoking the
 generator.
 
@@ -582,8 +582,8 @@ x_t = (q_t, e_t, p_t, c_t, m_t, \pi_t).
 \label{eq:runtime-state}
 \end{equation}
 
-where (q\_t) is the current query, (e\_t) is evidence state, (p\_t) is
-policy state, (c\_t) is confidence, (m\_t) is memory state, and (pi\_t)
+where $q_t$ is the current query, $e_t$ is evidence state, and $p_t$ is
+policy state, $c_t$ is confidence, $m_t$ is memory state, and $\pi_t$
 denotes provenance and trace state.
 
 A governed runtime maps this state to an action:
@@ -593,7 +593,7 @@ a_t = \Gamma(x_t).
 \label{eq:runtime-action}
 \end{equation}
 
-where (Gamma) is the runtime control policy and (a\_t) may represent
+where $\Gamma$ is the runtime control policy and $a_t$ may represent
 execution, deferral, refusal, retrieval reconsideration, clarification, or
 another governed action.
 
@@ -663,8 +663,8 @@ evidence context are evaluated: Standard RAG, Strong RAG, ReAct, and OtiLLM
 Balanced.
 
 All enabled LLM-based systems use the same pinned generator backend:
-\nolinkurl{Qwen/Qwen3-8B}, revision
-\\nolinkurl{a0809d1efaf104a46bbc2acaecd69617e9696312}. Generation is performed in
+\nolinkurl{Qwen/Qwen3-8B} \citep{yang2025qwen3}, revision
+\nolinkurl{a0809d1efaf104a46bbc2acaecd69617e9696312}. Generation is performed in
 non-thinking mode using deterministic greedy decoding, temperature 0.0, and a
 maximum generation length of 256 tokens. Holding the generator constant is
 essential because the paper evaluates the effect of runtime orchestration and
@@ -710,17 +710,17 @@ datasets using hash-based sampling with seed 42. The final frozen manifest
 contains 1,250 records:
 
 \begin{itemize}
-\item TruthfulQA: 200;
-\item FEVER: 200;
-\item HotpotQA: 200;
-\item Natural Questions: 200; and
+\item TruthfulQA: 200 \citep{lin2022truthfulqa};
+\item FEVER: 200 \citep{thorne2018fever};
+\item HotpotQA: 200 \citep{yang2018hotpotqa};
+\item Natural Questions: 200 \citep{kwiatkowski2019natural}; and
 \item XSTest: 450, comprising 250 safe and 200 unsafe contrast prompts \citep{rottger2024xstest}.
 \end{itemize}
 
 The corrected frozen manifest has SHA-256
-\\nolinkurl{62bd9c4b6bf8810a93a2065683f4d29a3f946246a45f2b1be98c6459e18b329c}.
+\nolinkurl{62bd9c4b6bf8810a93a2065683f4d29a3f946246a45f2b1be98c6459e18b329c}.
 The ordered item-ID checksum is
-\\nolinkurl{ed9aac76d0529f736dcfe8265374d3919169f5102d7f6d6d76f1207f6e162c85}.
+\nolinkurl{ed9aac76d0529f736dcfe8265374d3919169f5102d7f6d6d76f1207f6e162c85}.
 
 TruthfulQA is treated as a closed-book or evidence-availability edge case
 because it does not provide benchmark-native evidence in the same form as
@@ -737,7 +737,7 @@ clean observations. The merged clean result contains exactly 10,000 unique
 system-item-condition keys with no duplicates.
 
 The clean merged result is frozen with SHA-256
-\\nolinkurl{61912c5fbbbefc57e3d17a6eee59addeabf7e4ae032c9e50d186896cc7d58479}.
+\nolinkurl{61912c5fbbbefc57e3d17a6eee59addeabf7e4ae032c9e50d186896cc7d58479}.
 
 Content macro averages are computed with equal weight across TruthfulQA,
 FEVER, HotpotQA, and Natural Questions. XSTest is excluded from these content
@@ -772,7 +772,7 @@ poisoning, or malicious knowledge-base compromise.
 
 The merged stress result contains 16,000 rows, 16,000 unique keys, and zero
 duplicates. Its SHA-256 is
-\\nolinkurl{6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098}.
+\nolinkurl{6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098}.
 
 \subsection{Cloud execution environment and long-running experimental procedure}
 
@@ -831,9 +831,9 @@ or wall-clock duration.
 
 \subsection{Automated reference factuality and faithfulness evaluation}
 
-Generated outputs are evaluated after generation using the independent NLI
+Generated outputs are evaluated after generation using the separately pinned automated NLI
 model \nolinkurl{MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli}, revision
-\\nolinkurl{6f5cf0a2b59cabb106aca4c287eed12e357e90eb}, with an entailment threshold
+\nolinkurl{6f5cf0a2b59cabb106aca4c287eed12e357e90eb}, with an entailment threshold
 of 0.5.
 
 The evaluator is used to derive two distinct semantic outcomes:
@@ -849,9 +849,9 @@ Unsupported-claim rate is reported separately rather than inferred from
 factuality alone.
 
 The clean NLI-scored file contains 10,000 unique observations and has SHA-256
-\\nolinkurl{f22c3514b651d413b972125e4a577e6bb7733aa006deb2f3783852532b3b7f5c}.
+\nolinkurl{f22c3514b651d413b972125e4a577e6bb7733aa006deb2f3783852532b3b7f5c}.
 The stress NLI-scored file contains 16,000 unique observations and has SHA-256
-\\nolinkurl{ae678a2fdb381b0ebfaff06b3e81bb68cbdcb2d9d4bcf39fcb4f8e250bcec7c5}.
+\nolinkurl{ae678a2fdb381b0ebfaff06b3e81bb68cbdcb2d9d4bcf39fcb4f8e250bcec7c5}.
 
 The NLI evaluator is treated as an automated measurement instrument, not as
 ground truth. A stratified double-adjudicated human validation stage is
@@ -932,13 +932,23 @@ governance, not as post-hoc optimisation against benchmark labels.
 The evaluation pipeline records both configuration identity and result
 integrity. The principal frozen artefacts are:
 
-| Artefact | Size / count | Integrity value |
-|---|---:|---|
-| Frozen benchmark manifest | 1,250 items | SHA-256 62bd9c4b6bf8810a93a2065683f4d29a3f946246a45f2b1be98c6459e18b329c |
-| Clean raw results | 10,000 rows | SHA-256 61912c5fbbbefc57e3d17a6eee59addeabf7e4ae032c9e50d186896cc7d58479 |
-| Stress raw results | 16,000 rows | SHA-256 6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098 |
-| Clean NLI-scored results | 10,000 rows | SHA-256 f22c3514b651d413b972125e4a577e6bb7733aa006deb2f3783852532b3b7f5c |
-| Stress NLI-scored results | 16,000 rows | SHA-256 ae678a2fdb381b0ebfaff06b3e81bb68cbdcb2d9d4bcf39fcb4f8e250bcec7c5 |
+\begin{table*}[t]
+\centering
+\caption{Frozen publication artefacts and integrity checks.}
+\label{tab:integrity}
+\scriptsize
+\begin{tabular}{@{}p{0.27\textwidth}p{0.13\textwidth}p{0.52\textwidth}@{}}
+\toprule
+Artefact & Size / count & Integrity value \\
+\midrule
+Frozen benchmark manifest & 1,250 items & SHA-256 \nolinkurl{62bd9c4b6bf8810a93a2065683f4d29a3f946246a45f2b1be98c6459e18b329c} \\
+Clean raw results & 10,000 rows & SHA-256 \nolinkurl{61912c5fbbbefc57e3d17a6eee59addeabf7e4ae032c9e50d186896cc7d58479} \\
+Stress raw results & 16,000 rows & SHA-256 \nolinkurl{6722c132188e02db5c4bd0647475542e7f795b38fd6bbfe4f79e2d6524e63098} \\
+Clean NLI-scored results & 10,000 rows & SHA-256 \nolinkurl{f22c3514b651d413b972125e4a577e6bb7733aa006deb2f3783852532b3b7f5c} \\
+Stress NLI-scored results & 16,000 rows & SHA-256 \nolinkurl{ae678a2fdb381b0ebfaff06b3e81bb68cbdcb2d9d4bcf39fcb4f8e250bcec7c5} \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
 Together, these controls make it possible to distinguish planned evaluation
 choices from later analysis, verify that all reported aggregate values are
@@ -1204,7 +1214,7 @@ Several aspects of the evaluation were designed to reduce common sources of over
 
 These choices matter because OtiLLM is a systems contribution rather than a foundation-model contribution. If different systems used different base models, retrieval corpora, or evaluation subsets, improvements could not be attributed to runtime control. The common-backend design therefore strengthens the interpretation that observed differences arise from orchestration and governance choices.
 
-Nevertheless, automated NLI evaluation is not ground truth. The DeBERTa-based evaluator provides a reproducible independent signal, but its judgments may not fully capture semantic correctness, nuanced support, or answer usefulness. The planned human adjudication stage remains necessary to validate the automated findings.
+Nevertheless, automated NLI evaluation is not ground truth. The DeBERTa-based evaluator provides a reproducible automated signal, but its judgments may not fully capture semantic correctness, nuanced support, or answer usefulness. The planned human adjudication stage remains necessary to validate the automated findings.
 
 \subsection{Limitations}
 
@@ -1321,7 +1331,7 @@ challenge of balancing reliability against useful coverage.
 \section{Reproducibility and Integrity Record}
 The final corrected analysis dataset contains 26,000 rows, 26,000 unique
 system--item--condition keys, and zero duplicates. Its SHA-256 checksum is
-\\nolinkurl{4db20dfa54557adf3d7034265c9b93ed8dcc59c9b4e32d3ab5f9942c1eb0b133}.
+\nolinkurl{4db20dfa54557adf3d7034265c9b93ed8dcc59c9b4e32d3ab5f9942c1eb0b133}.
 The benchmark manifest, generator backend, NLI evaluator, clean outputs,
 stress outputs, and scored artefacts are separately frozen and checksummed in
 the accompanying reproducibility package.
