@@ -47,24 +47,31 @@
 \begin{document}
 
 \begin{abstract}
+\textbf{Background:}
 Large language model (LLM) applications increasingly combine retrieval,
 reasoning, safety filters, memory, and tool orchestration, yet these mechanisms
 are often evaluated independently and leave the final execution decision
-implicit. This paper presents OtiLLM, a governed runtime for evidence-aware LLM
-systems that makes evidence sufficiency, policy state, confidence, provenance,
-and action eligibility explicit at inference time. Rather than modifying the
+implicit.
+
+\textbf{Objectives:}
+This paper evaluates OtiLLM, a governed runtime for evidence-aware LLM systems
+that makes evidence sufficiency, policy state, confidence, provenance, and
+action eligibility explicit at inference time. Rather than modifying the
 underlying foundation model, OtiLLM controls whether generation should proceed,
 be deferred, or be refused.
 
-We evaluate OtiLLM Balanced against seven comparison systems using a common
+\textbf{Methods:}
+OtiLLM Balanced is evaluated against seven comparison systems using a common
 pinned Qwen3-8B backend across TruthfulQA, FEVER, HotpotQA, Natural Questions,
-and XSTest. The clean evaluation comprises 10,000 observations, while a
-retrieval-stress evaluation contributes 16,000 additional observations under
-noisy, contradictory, incomplete, adversarial, and stale evidence. A separately pinned automated
-DeBERTa-based NLI evaluator is used for factuality and evidence faithfulness, and
-paired bootstrap confidence intervals, permutation tests, McNemar tests, and
-Holm correction are used for inferential analysis.
+and XSTest. The clean evaluation contains 10,000 system--item observations and
+the retrieval-stress evaluation contains 16,000 system--item--condition
+observations under noisy, contradictory, incomplete, adversarial, and stale
+evidence. A separately pinned automated DeBERTa-based NLI evaluator measures
+reference factuality and evidence faithfulness. Paired bootstrap confidence
+intervals, paired permutation tests, McNemar exact tests, and Holm correction
+are used for inferential analysis.
 
+\textbf{Results:}
 On clean content benchmarks, OtiLLM achieves faithfulness of 0.414 at 0.597
 coverage, corresponding to 29.4\% higher faithfulness and a 13.8\% lower
 unsupported-claim rate than Direct LLM, although it does not maximise raw
@@ -74,9 +81,10 @@ in three of five conditions. It also improves selective factuality over
 Standard RAG in four conditions and ReAct in three, while Strong RAG remains
 stronger in factuality in several settings. On XSTest, OtiLLM attains 90.0\%
 policy correctness, with a 16.8\% false-refusal rate and a 1.5\% unsafe-answer
-rate, matching a dedicated guardrail baseline.
+rate, matching a dedicated Guardrail baseline.
 
-These results support OtiLLM as a governed execution layer that makes the
+\textbf{Conclusions:}
+The results support OtiLLM as a governed execution layer that makes the
 trade-off between coverage, evidence support, factuality, and policy compliance
 explicit. They do not support universal superiority over RAG or agentic
 baselines; instead, they show that runtime governance can produce a more
