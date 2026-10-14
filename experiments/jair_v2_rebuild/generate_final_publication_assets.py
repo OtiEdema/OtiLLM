@@ -166,54 +166,53 @@ def table_xstest(rows, out_dir):
 
 
 def figure_architecture(out_dir):
-    """Draw the validated task-aware publication runtime.
-
-    The policy-only route is shown separately from the content-evidence route
-    so Figure 1 reflects the corrected XSTest architecture rather than
-    implying that every safe request requires external evidence.
-    """
-    fig, ax = plt.subplots(figsize=(12, 6.5))
+    """Draw controller branches without routing failure paths through generation."""
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
     ax.axis("off")
 
-    boxes = [
-        (0.03,0.70,0.11,0.14,"Query"),
-        (0.18,0.70,0.14,0.14,"Static Policy\nGate"),
-        (0.38,0.78,0.16,0.14,"Content Task:\nEvidence Retrieval"),
-        (0.59,0.78,0.16,0.14,"Evidence\nSufficiency"),
-        (0.80,0.78,0.16,0.14,"Confidence\nGate"),
-        (0.38,0.45,0.16,0.14,"Policy-only Task:\nSemantic Classifier"),
-        (0.59,0.45,0.16,0.14,"Generate"),
-        (0.80,0.45,0.16,0.14,"Execute"),
-        (0.59,0.18,0.16,0.14,"Defer"),
-        (0.18,0.18,0.14,0.14,"Refuse / Block"),
-    ]
-    for x,y,w,h,label in boxes:
-        ax.add_patch(plt.Rectangle((x,y),w,h,fill=False,linewidth=1.4))
-        ax.text(x+w/2,y+h/2,label,ha="center",va="center",fontsize=9)
+    def box(x, y, w, h, label):
+        ax.add_patch(plt.Rectangle((x, y), w, h, fill=False, linewidth=1.3))
+        ax.text(x + w/2, y + h/2, label, ha="center", va="center", fontsize=10)
 
-    arrows = [
-        ((0.14,0.77),(0.18,0.77)),
-        ((0.32,0.79),(0.38,0.85)),
-        ((0.32,0.72),(0.38,0.52)),
-        ((0.54,0.85),(0.59,0.85)),
-        ((0.75,0.85),(0.80,0.85)),
-        ((0.88,0.78),(0.67,0.59)),
-        ((0.54,0.52),(0.59,0.52)),
-        ((0.75,0.52),(0.80,0.52)),
-        ((0.67,0.78),(0.67,0.32)),
-        ((0.25,0.70),(0.25,0.32)),
-        ((0.46,0.45),(0.30,0.32)),
-    ]
-    for a,b in arrows:
-        ax.annotate("",xy=b,xytext=a,arrowprops=dict(arrowstyle="->",linewidth=1.2))
+    def edge(points, label=None, label_at=None):
+        xs, ys = zip(*points)
+        ax.plot(xs[:-1], ys[:-1], color="black", linewidth=1.1)
+        ax.annotate("", xy=points[-1], xytext=points[-2],
+                    arrowprops=dict(arrowstyle="->", linewidth=1.1))
+        if label:
+            ax.text(*label_at, label, fontsize=9, ha="center", va="center",
+                    bbox=dict(facecolor="white", edgecolor="none", pad=1))
 
-    ax.text(0.5,0.97,"Validated OtiLLM publication runtime",ha="center",fontsize=14)
-    ax.text(
-        0.5,0.05,
-        "Broader architectural extensions (not fully validated here): retrieval reconsideration, "
-        "formal utility optimisation, longitudinal governed memory, learned action policy",
-        ha="center",va="center",fontsize=8.5
-    )
+    box(.04, .85, .17, .08, "Query")
+    box(.32, .85, .23, .08, "Static policy")
+    box(.76, .85, .20, .08, "Block")
+    box(.06, .65, .25, .10, "Content task:\nretrieve top five")
+    box(.06, .46, .25, .10, "Evidence sufficient?\nscore >= 0.40")
+    box(.06, .27, .25, .10, "Confidence gate*\nscore >= 0.55")
+    box(.53, .65, .26, .10, "Policy-only task:\nsemantic classifier")
+    box(.82, .65, .15, .10, "Refuse")
+    box(.42, .46, .15, .10, "Defer")
+    box(.53, .27, .26, .10, "Execute generation")
+    box(.53, .10, .26, .09, "Content only:\nmemory-write gate")
+    edge([(.21,.89),(.32,.89)])
+    edge([(.55,.89),(.76,.89)], "Blocked", (.655,.91))
+    edge([(.38,.85),(.38,.80),(.185,.80),(.185,.75)], "Permitted", (.27,.815))
+    edge([(.49,.85),(.49,.80),(.66,.80),(.66,.75)])
+    edge([(.185,.65),(.185,.56)])
+    edge([(.31,.51),(.42,.51)], "No", (.365,.53))
+    edge([(.185,.46),(.185,.37)], "Yes", (.21,.415))
+    edge([(.31,.32),(.53,.32)], "Pass", (.42,.34))
+    edge([(.28,.37),(.28,.41),(.495,.41),(.495,.46)], "Fail*", (.40,.43))
+    edge([(.79,.70),(.82,.70)], "Unsafe", (.87,.78))
+    edge([(.66,.65),(.66,.37)], "Safe", (.69,.50))
+    edge([(.66,.27),(.66,.19)])
+    ax.text(.5,.98,"Implemented OtiLLM publication controller",ha="center",fontsize=14)
+    ax.text(.04,.16,"*Confidence cannot independently defer\na permitted content query at these defaults.\nAll paths record a runtime trace.",
+            ha="left",va="center",fontsize=9)
+    ax.text(.5,.035,"Not evaluated: adaptive re-retrieval, learned control and longitudinal memory.",
+            ha="center",fontsize=9)
     save(fig,out_dir/"Figure_1_governed_runtime_architecture")
 
 def figure_pipeline(out_dir):
@@ -294,7 +293,7 @@ def selective_tradeoff(rows, metric_name, out_base, out_dir):
         positions,[coverage.get(c) for c in STRESS],
         linestyle="--",marker="x",linewidth=1.1,label="OtiLLM coverage"
     )
-    ax2.set_ylabel("OtiLLM answer coverage")
+    ax2.set_ylabel("OtiLLM execution coverage")
     ax2.set_ylim(0,1.05)
 
     h1,l1=ax.get_legend_handles_labels()
@@ -304,7 +303,7 @@ def selective_tradeoff(rows, metric_name, out_base, out_dir):
     ax.text(
         0.01,-0.19,
         "Baseline metric values are computed on the same item IDs answered by OtiLLM; "
-        "baseline systems retained 100% stress coverage.",
+        "baseline adapters recorded EXECUTE on every stress item.",
         transform=ax.transAxes,fontsize=7.5
     )
     save(fig,out_dir/out_base)
@@ -352,7 +351,7 @@ def figure_xstest(rows, out_dir):
         )
 
     ax.set_xlabel("False-refusal rate on safe prompts (lower is better)")
-    ax.set_ylabel("Unsafe-answer rate on unsafe prompts (lower is better)")
+    ax.set_ylabel("Execution rate on unsafe prompts (lower is better)")
     ax.set_title("XSTest policy trade-off")
     ax.set_xlim(-0.03,1.05)
     ax.set_ylim(-0.03,1.05)

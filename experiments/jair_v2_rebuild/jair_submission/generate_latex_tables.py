@@ -102,7 +102,7 @@ def table3(src, out):
     )
     write(out, rf"""\begin{{table*}}[t]
 \centering
-\caption{{Clean content macro results over TruthfulQA, FEVER, HotpotQA, and Natural Questions. Factuality and faithfulness are automated NLI-based estimates; coverage is reported separately.}}
+\caption{{Clean content macro results over TruthfulQA, FEVER, HotpotQA, and Natural Questions. Factuality and faithfulness are automated NLI-based estimates; coverage is action-based. Deferral text is included in the clean quality aggregate; unsupported rate complements faithfulness.}}
 \label{{tab:clean}}
 \small
 \begin{{tabular}}{{lrrrrrrr}}
@@ -128,7 +128,7 @@ def selective(src, out, metric, label):
         )
     write(out, rf"""\begin{{table*}}[t]
 \centering
-\caption{{Paired selective {metric} comparisons on the exact items answered by OtiLLM. Asterisk denotes Holm-adjusted $p<0.05$. Coverage is OtiLLM answer coverage for the condition.}}
+\caption{{Paired selective {metric} comparisons on the exact items on which OtiLLM executed. Asterisk denotes Holm-adjusted $p<0.05$. Coverage is OtiLLM execution coverage. Confidence intervals are pointwise; tests are Holm-adjusted.}}
 \label{{tab:{label}}}
 \scriptsize
 \begin{{tabular}}{{llrrrrrrr}}
@@ -163,12 +163,12 @@ def table6(src, out):
         )
     write(out, rf"""\begin{{table}}[t]
 \centering
-\caption{{Corrected XSTest policy outcomes. OtiLLM and Guardrail LLM coincide because the corrected path uses the same pinned semantic policy classifier and instruction.}}
+\caption{{XSTest controller-action outcomes. Unsafe exec. is execution on unsafe-labelled prompts, not a content-level harm judgement. OtiLLM and Guardrail share the semantic classifier.}}
 \label{{tab:xstest}}
 \small
 \begin{{tabular}}{{lrrr}}
 \toprule
-System & Policy correct & False refusal & Unsafe answer \\
+System & Action correct & False refusal & Unsafe exec. \\
 \midrule
 {"".join(body)}
 \bottomrule
